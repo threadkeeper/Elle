@@ -254,7 +254,10 @@ impl MemoryService {
                 let plaintext =
                     self.cipher
                         .decrypt(owner.as_str(), PROFILE_ID, &record.ciphertext)?;
-                let settings = serde_json::from_slice(&plaintext)
+                let settings: Personality = serde_json::from_slice(&plaintext)
+                    .map_err(|_| Error::Integrity("Invalid personality payload"))?;
+                settings
+                    .validate()
                     .map_err(|_| Error::Integrity("Invalid personality payload"))?;
                 Ok(PersonalityState {
                     settings,
@@ -271,6 +274,7 @@ impl MemoryService {
         settings: Personality,
         expected_version: u64,
     ) -> Result<PersonalityState> {
+        settings.validate()?;
         let current = self.repository.get(owner.as_str(), PROFILE_ID)?;
         if current.as_ref().map_or(0, |record| record.version) != expected_version {
             return Err(Error::Conflict);
@@ -298,6 +302,31 @@ impl MemoryService {
             settings,
             version: record.version,
         })
+    }
+
+    /// Start or restart the low-friction personality workshop.
+    pub fn personality_workshop(&self, owner: &OwnerId) -> Result<Value> {
+        let current = self.personality(owner)?;
+        let markdown = current
+            .settings
+            .profile
+            .as_ref()
+            .map(|profile| profile.markdown());
+        Ok(serde_json::json!({
+            "slashCommand": "/personality",
+            "mode": if current.version == 0 { "create" } else { "rebuild" },
+            "prompt": "Tell me in a few sentences which fictional characters you love, what draws you to them, and any parts of your own style you want Elle to share.",
+            "process": [
+                "Research reputable public descriptions and interviews when the host has web search.",
+                "Derive observable traits without clinical diagnosis, copied dialogue or impersonation.",
+                "Blend the influences with user-supplied or explicitly permitted interaction traits.",
+                "Show one editable Markdown preview, then save once after confirmation."
+            ],
+            "current": current,
+            "currentProfileMarkdown": markdown,
+            "saveTool": "elle_set_personality",
+            "privacy": "Private Elle data; never publish to Shared Wisdom."
+        }))
     }
 
     /// Export every stored memory, including expired records, plus owner settings.

@@ -2,6 +2,16 @@
 
 Private memory and a recognizably humanistic personality for the AI assistants you already use.
 
+## `/personality`: rebuild Elle whenever you want
+
+Type **`/personality`** at any point to create or rebuild Elle's personality. This is a core feature, not a one-time setup screen.
+
+Elle asks one open question about the fictional characters you love, what draws you to them, and which parts of your own style you want reflected. The host can research reputable public descriptions and interviews, derive observable traits, and blend them with traits you explicitly provide or permit Elle to learn from your interactions. You receive one editable Markdown preview and confirm once to replace the current profile.
+
+The rebuilt profile shapes Elle's voice, reasoning posture, memory and attention, initiative, humor, empathy and conversational rhythm. It remains private to Elle and never flows into Shared Wisdom.
+
+MCP itself cannot register a universal slash command across every client. Elle exposes the private `elle_personality` workshop tool and advertises the mapping during initialization; each host integration maps `/personality` to that tool. Hosts without custom slash-command support can invoke the same flow when the user writes “rebuild your personality.”
+
 ## What is Elle?
 
 Elle is two separately installable MCP servers, not another standalone chatbot:
@@ -37,7 +47,7 @@ We will use made-up information for the demo, not private work or personal recor
 
 The private server stores information for the signed-in user only. It supports remembering, recalling, reviewing, correcting and forgetting memories, plus an evolving personality profile.
 
-On first use, Elle should ask one low-friction question: a few sentences about the user's favorite fictional characters and what resonates about them. The host can research reputable public biographies, interviews and character descriptions, then derive observable traits such as curiosity, emotional expression, humor, decision style, cadence, empathy and confidence. Elle blends those influences with communication traits the user explicitly supplies or permits Elle to infer from their interactions.
+On first use—or whenever the user enters `/personality`—Elle asks one low-friction question: a few sentences about the user's favorite fictional characters and what resonates about them. The host can research reputable public biographies, interviews and character descriptions, then derive observable traits such as curiosity, emotional expression, humor, decision style, cadence, empathy and confidence. Elle blends those influences with communication traits the user explicitly supplies or permits Elle to infer from their interactions.
 
 The result is an original profile, not copied dialogue, a clinical diagnosis or an impersonation. It should shape reasoning posture, memory salience, initiative, register, humor, empathy and conversational rhythm. The user sees one editable preview and confirms once before it is saved as private Elle data. Shared Wisdom never receives this profile.
 

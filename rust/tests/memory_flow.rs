@@ -137,6 +137,7 @@ fn backup_restores_corrected_memory_and_personality_without_overwrite() {
     let chosen = Personality {
         tone: Tone::Direct,
         detail: Detail::Concise,
+        profile: None,
     };
     {
         let mut service = source.service();
