@@ -19,14 +19,20 @@ class FoundryPersonaEvalTests(unittest.TestCase):
                     "We can collaborate together with warm banter and playful chaos."
                 ),
                 "wildcard": "callback humor",
+                "alignment": {
+                    "burnt_peanut_traits": 0.7,
+                    "gimmick_traits": 0.8,
+                    "jean_traits": 0.9,
+                    "original_elle_blend": 0.85,
+                },
                 "score": 1.0,
             }
         ]
         report = metrics(rows)
         self.assertEqual(set(report["trait_signal_coverage"]), {"burnt_peanut", "gimmick", "jean"})
         self.assertEqual(report["vanilla_marker_rate"], 0.0)
+        self.assertEqual(report["average_judged_alignment"]["jean_traits"], 0.9)
 
 
 if __name__ == "__main__":
     unittest.main()
-

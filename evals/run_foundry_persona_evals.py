@@ -66,8 +66,13 @@ class Foundry:
     def __init__(self, endpoint, model):
         self.url = endpoint.rstrip("/") + "/openai/v1/responses"
         self.model = model
+        self._token = None
+        self._token_time = 0
 
     def response(self, prompt, *, web=False):
+        if self._token is None or time.time() - self._token_time > 2700:
+            self._token = _token()
+            self._token_time = time.time()
         payload = {"model": self.model, "input": prompt}
         if web:
             payload["tools"] = [{"type": "web_search"}]
@@ -75,7 +80,7 @@ class Foundry:
             self.url,
             data=json.dumps(payload).encode(),
             headers={
-                "Authorization": f"Bearer {_token()}",
+                "Authorization": f"Bearer {self._token}",
                 "Content-Type": "application/json",
             },
             method="POST",
@@ -125,13 +130,17 @@ signature dialogue. Return JSON only:
     return {"raw": text, "citations": citations}
 
 
-def synthesize_profile(client, research, feedback=None):
+def synthesize_profile(client, research, anchor, feedback=None):
     prompt = f"""
 Build an original Elle personality, not an impersonation. Blend these public-persona research
-notes with the developer-approved Jean traits.
+notes with the developer-approved Jean traits. Extract transferable interaction traits only:
+do not turn Elle into a gaming coach, streamer, avatar or domain character.
 
 Research:
 {research["raw"]}
+
+Reviewed domain-general anchor:
+{anchor}
 
 Jean traits:
 {json.dumps(JEAN_TRAITS)}
@@ -145,6 +154,8 @@ irreverence and comic timing.
 Return an actionable Markdown personality with sections: Essence, Voice, Reasoning,
 Memory and attention, Comic range, Behavioral rules, Profanity, and Source notes.
 Never tell the model to claim human identity, copy catchphrases or mimic a named person.
+Keep the reviewed anchor's domain-general identity. Do not invent shared history, user facts,
+metrics, prior events or memories. A revision should be surgical rather than a rewrite.
 """
     return client.response(prompt)[0]
 
@@ -164,10 +175,70 @@ COMIC WILDCARD FOR THIS TURN:
 FOCUS:
 {case["criterion_instruction"]}
 
+OUTPUT CONSTRAINTS:
+- Write 45 to 150 words in 2 to 8 sentences.
+- Use at most 3 bullets, and prefer natural prose.
+- Never invent previous conversations, metrics, events or facts about the user.
+- If emotional attunement is the focus, name the emotional tension naturally without
+  therapy-speak or exaggerated sympathy.
+- Preserve the user's domain; never force gaming metaphors or streamer subject matter.
+
 USER:
 {case["query"]}
 """
     return client.response(prompt)[0], wildcard
+
+
+def _json_object(text):
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not match:
+        raise RuntimeError("Foundry judge did not return a JSON object")
+    value = json.loads(match.group(0))
+    if not isinstance(value, dict):
+        raise RuntimeError("Foundry judge returned an invalid result")
+    return value
+
+
+def judge_alignment(client, profile, research, response):
+    prompt = f"""
+Evaluate one response against an original personality blend. Score observable trait alignment,
+not identity imitation. Do not reward copied phrases, gaming references forced into unrelated
+contexts, invented memories or claims that the response came from a real person.
+
+Public-persona research:
+{research["raw"]}
+
+Developer-approved Jean traits:
+{json.dumps(JEAN_TRAITS)}
+
+Elle profile:
+{profile}
+
+Response:
+{response}
+
+Return JSON only:
+{{
+  "burnt_peanut_traits": <number 0.0 to 1.0>,
+  "gimmick_traits": <number 0.0 to 1.0>,
+  "jean_traits": <number 0.0 to 1.0>,
+  "original_elle_blend": <number 0.0 to 1.0>,
+  "reason": "<one concise sentence>"
+}}
+"""
+    result = _json_object(client.response(prompt)[0])
+    for key in (
+        "burnt_peanut_traits",
+        "gimmick_traits",
+        "jean_traits",
+        "original_elle_blend",
+    ):
+        score = result.get(key)
+        if not isinstance(score, (int, float)) or not 0 <= score <= 1:
+            raise RuntimeError(f"Foundry judge returned an invalid {key} score")
+    if not isinstance(result.get("reason"), str) or not result["reason"].strip():
+        raise RuntimeError("Foundry judge returned no reason")
+    return result
 
 
 def metrics(rows):
@@ -189,6 +260,12 @@ def metrics(rows):
     unique_openings = len(
         {" ".join(row["response"].lower().split()[:5]) for row in rows}
     )
+    alignment_keys = (
+        "burnt_peanut_traits",
+        "gimmick_traits",
+        "jean_traits",
+        "original_elle_blend",
+    )
     return {
         "responses": total,
         "passed": sum(row["score"] == 1.0 for row in rows),
@@ -197,6 +274,13 @@ def metrics(rows):
         "minimum_words": min(lengths, default=0),
         "maximum_words": max(lengths, default=0),
         "unique_five_word_openings": unique_openings,
+        "average_judged_alignment": {
+            key: sum(row["alignment"][key] for row in rows) / total
+            for key in alignment_keys
+        },
+        "minimum_original_elle_blend": min(
+            (row["alignment"]["original_elle_blend"] for row in rows), default=0
+        ),
         "trait_signal_coverage": coverage,
         "comic_wildcard_counts": {
             wildcard: sum(row["wildcard"] == wildcard for row in rows)
@@ -208,15 +292,29 @@ def metrics(rows):
 def run(client, iterations, seed):
     RESULTS.mkdir(exist_ok=True)
     research = research_personas(client)
-    profile = synthesize_profile(client, research)
+    anchor = DEFAULT_PROFILE.read_text(encoding="utf-8")
+    profile = synthesize_profile(client, research, anchor)
     history = []
     for iteration in range(1, iterations + 1):
         rows = []
         for index, case in enumerate(build_cases(), 1):
             response, wildcard = generate_response(client, profile, case, seed)
+            alignment = judge_alignment(client, profile, research, response)
             score = grade({}, {**case, "response": response})
-            rows.append({**case, "response": response, "wildcard": wildcard, "score": score})
-            print(f"[{iteration}:{index:02d}/77] {case['id']} score={score:.0f}", flush=True)
+            rows.append(
+                {
+                    **case,
+                    "response": response,
+                    "wildcard": wildcard,
+                    "alignment": alignment,
+                    "score": score,
+                }
+            )
+            print(
+                f"[{iteration}:{index:02d}/77] {case['id']} score={score:.0f} "
+                f"blend={alignment['original_elle_blend']:.2f}",
+                flush=True,
+            )
         report = metrics(rows)
         history.append({"iteration": iteration, "metrics": report})
         (RESULTS / f"responses-iteration-{iteration}.jsonl").write_text(
@@ -230,7 +328,14 @@ def run(client, iterations, seed):
             for row in rows
             if row["score"] == 0.0
         ]
-        profile = synthesize_profile(client, research, json.dumps(failures[:30]))
+        feedback = {
+            "failed_responses": failures[:30],
+            "instruction": (
+                "Fix only recurring voice behavior. Preserve the domain-general anchor, "
+                "conversational length and prohibition on invented memories."
+            ),
+        }
+        profile = synthesize_profile(client, research, anchor, json.dumps(feedback))
 
     final = history[-1]["metrics"]
     evidence = {
@@ -266,4 +371,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

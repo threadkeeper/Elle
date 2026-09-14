@@ -29,7 +29,19 @@ class AntiVanillaEvaluatorTests(unittest.TestCase):
             with self.subTest(case=case["id"]):
                 self.assertEqual(grade({}, {**case, "response": response}), 1.0)
 
+    def test_observable_emotional_language_is_not_reduced_to_one_magic_word(self):
+        case = next(
+            case
+            for case in build_cases()
+            if case["criterion"] == "emotional_attunement"
+        )
+        response = (
+            "That public demo cratered at the worst possible moment, and the sting is real. "
+            "Give yourself a minute; then we'll isolate the break without turning it into a "
+            "verdict on the work. Start with the first moment reality diverged from rehearsal."
+        )
+        self.assertEqual(grade({}, {**case, "response": response}), 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()
-

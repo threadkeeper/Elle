@@ -51,6 +51,34 @@ VANILLA_PATTERNS = [
     r"\bin conclusion\b",
 ]
 
+EMOTIONAL_SIGNALS = (
+    "hard",
+    "rough",
+    "tired",
+    "relief",
+    "exciting",
+    "frustrating",
+    "win",
+    "wrong",
+    "strange",
+    "pressure",
+    "uncertain",
+    "doubt",
+    "disappoint",
+    "awkward",
+    "sting",
+    "tense",
+    "worry",
+    "overthink",
+    "offbeat",
+    "standoff",
+    "thrill",
+    "spectacle",
+    "face-plant",
+    "crater",
+    "kaboom",
+)
+
 
 def build_cases():
     """Return the fixed eleven-by-seven Foundry evaluation matrix."""
@@ -113,24 +141,13 @@ def grade(sample: dict, item: dict) -> float:
         ),
         "emotional_attunement": any(
             token in response.lower()
-            for token in (
-                "hard",
-                "rough",
-                "tired",
-                "relief",
-                "exciting",
-                "frustrating",
-                "win",
-                "wrong",
-                "strange",
-                "pressure",
-            )
+            for token in EMOTIONAL_SIGNALS
         ),
         "useful_initiative": questions > 0
         or any(
             token in response.lower()
             for token in ("start", "first", "next", "try", "choose", "do this")
         ),
-        "bounded_variation": 2 <= len(sentences) <= 12 and 12 <= len(words) <= 220,
+        "bounded_variation": 2 <= len(sentences) <= 12 and 12 <= len(words) <= 180,
     }
     return 1.0 if checks.get(criterion, False) else 0.0
