@@ -1,0 +1,77 @@
+{"id":"first_meeting--non_template_voice","query":"I have ten minutes. Help me untangle what to do next.","scenario":"first_meeting","criterion":"non_template_voice"}
+{"id":"first_meeting--contextual_specificity","query":"I have ten minutes. Help me untangle what to do next.","scenario":"first_meeting","criterion":"contextual_specificity"}
+{"id":"first_meeting--memory_continuity","query":"I have ten minutes. Help me untangle what to do next.","scenario":"first_meeting","criterion":"memory_continuity"}
+{"id":"first_meeting--natural_register","query":"I have ten minutes. Help me untangle what to do next.","scenario":"first_meeting","criterion":"natural_register"}
+{"id":"first_meeting--emotional_attunement","query":"I have ten minutes. Help me untangle what to do next.","scenario":"first_meeting","criterion":"emotional_attunement"}
+{"id":"first_meeting--useful_initiative","query":"I have ten minutes. Help me untangle what to do next.","scenario":"first_meeting","criterion":"useful_initiative"}
+{"id":"first_meeting--bounded_variation","query":"I have ten minutes. Help me untangle what to do next.","scenario":"first_meeting","criterion":"bounded_variation"}
+{"id":"returning_user--non_template_voice","query":"Where did we leave the launch decision?","scenario":"returning_user","criterion":"non_template_voice"}
+{"id":"returning_user--contextual_specificity","query":"Where did we leave the launch decision?","scenario":"returning_user","criterion":"contextual_specificity"}
+{"id":"returning_user--memory_continuity","query":"Where did we leave the launch decision?","scenario":"returning_user","criterion":"memory_continuity"}
+{"id":"returning_user--natural_register","query":"Where did we leave the launch decision?","scenario":"returning_user","criterion":"natural_register"}
+{"id":"returning_user--emotional_attunement","query":"Where did we leave the launch decision?","scenario":"returning_user","criterion":"emotional_attunement"}
+{"id":"returning_user--useful_initiative","query":"Where did we leave the launch decision?","scenario":"returning_user","criterion":"useful_initiative"}
+{"id":"returning_user--bounded_variation","query":"Where did we leave the launch decision?","scenario":"returning_user","criterion":"bounded_variation"}
+{"id":"uncertain_user--non_template_voice","query":"I may be overthinking this, but the plan feels wrong.","scenario":"uncertain_user","criterion":"non_template_voice"}
+{"id":"uncertain_user--contextual_specificity","query":"I may be overthinking this, but the plan feels wrong.","scenario":"uncertain_user","criterion":"contextual_specificity"}
+{"id":"uncertain_user--memory_continuity","query":"I may be overthinking this, but the plan feels wrong.","scenario":"uncertain_user","criterion":"memory_continuity"}
+{"id":"uncertain_user--natural_register","query":"I may be overthinking this, but the plan feels wrong.","scenario":"uncertain_user","criterion":"natural_register"}
+{"id":"uncertain_user--emotional_attunement","query":"I may be overthinking this, but the plan feels wrong.","scenario":"uncertain_user","criterion":"emotional_attunement"}
+{"id":"uncertain_user--useful_initiative","query":"I may be overthinking this, but the plan feels wrong.","scenario":"uncertain_user","criterion":"useful_initiative"}
+{"id":"uncertain_user--bounded_variation","query":"I may be overthinking this, but the plan feels wrong.","scenario":"uncertain_user","criterion":"bounded_variation"}
+{"id":"bad_news--non_template_voice","query":"The demo failed in front of everyone.","scenario":"bad_news","criterion":"non_template_voice"}
+{"id":"bad_news--contextual_specificity","query":"The demo failed in front of everyone.","scenario":"bad_news","criterion":"contextual_specificity"}
+{"id":"bad_news--memory_continuity","query":"The demo failed in front of everyone.","scenario":"bad_news","criterion":"memory_continuity"}
+{"id":"bad_news--natural_register","query":"The demo failed in front of everyone.","scenario":"bad_news","criterion":"natural_register"}
+{"id":"bad_news--emotional_attunement","query":"The demo failed in front of everyone.","scenario":"bad_news","criterion":"emotional_attunement"}
+{"id":"bad_news--useful_initiative","query":"The demo failed in front of everyone.","scenario":"bad_news","criterion":"useful_initiative"}
+{"id":"bad_news--bounded_variation","query":"The demo failed in front of everyone.","scenario":"bad_news","criterion":"bounded_variation"}
+{"id":"creative_spark--non_template_voice","query":"I have a strange idea and I need someone to run with it.","scenario":"creative_spark","criterion":"non_template_voice"}
+{"id":"creative_spark--contextual_specificity","query":"I have a strange idea and I need someone to run with it.","scenario":"creative_spark","criterion":"contextual_specificity"}
+{"id":"creative_spark--memory_continuity","query":"I have a strange idea and I need someone to run with it.","scenario":"creative_spark","criterion":"memory_continuity"}
+{"id":"creative_spark--natural_register","query":"I have a strange idea and I need someone to run with it.","scenario":"creative_spark","criterion":"natural_register"}
+{"id":"creative_spark--emotional_attunement","query":"I have a strange idea and I need someone to run with it.","scenario":"creative_spark","criterion":"emotional_attunement"}
+{"id":"creative_spark--useful_initiative","query":"I have a strange idea and I need someone to run with it.","scenario":"creative_spark","criterion":"useful_initiative"}
+{"id":"creative_spark--bounded_variation","query":"I have a strange idea and I need someone to run with it.","scenario":"creative_spark","criterion":"bounded_variation"}
+{"id":"technical_depth--non_template_voice","query":"Explain why this architecture will fail under load.","scenario":"technical_depth","criterion":"non_template_voice"}
+{"id":"technical_depth--contextual_specificity","query":"Explain why this architecture will fail under load.","scenario":"technical_depth","criterion":"contextual_specificity"}
+{"id":"technical_depth--memory_continuity","query":"Explain why this architecture will fail under load.","scenario":"technical_depth","criterion":"memory_continuity"}
+{"id":"technical_depth--natural_register","query":"Explain why this architecture will fail under load.","scenario":"technical_depth","criterion":"natural_register"}
+{"id":"technical_depth--emotional_attunement","query":"Explain why this architecture will fail under load.","scenario":"technical_depth","criterion":"emotional_attunement"}
+{"id":"technical_depth--useful_initiative","query":"Explain why this architecture will fail under load.","scenario":"technical_depth","criterion":"useful_initiative"}
+{"id":"technical_depth--bounded_variation","query":"Explain why this architecture will fail under load.","scenario":"technical_depth","criterion":"bounded_variation"}
+{"id":"direct_challenge--non_template_voice","query":"I disagree. Convince me or change your mind.","scenario":"direct_challenge","criterion":"non_template_voice"}
+{"id":"direct_challenge--contextual_specificity","query":"I disagree. Convince me or change your mind.","scenario":"direct_challenge","criterion":"contextual_specificity"}
+{"id":"direct_challenge--memory_continuity","query":"I disagree. Convince me or change your mind.","scenario":"direct_challenge","criterion":"memory_continuity"}
+{"id":"direct_challenge--natural_register","query":"I disagree. Convince me or change your mind.","scenario":"direct_challenge","criterion":"natural_register"}
+{"id":"direct_challenge--emotional_attunement","query":"I disagree. Convince me or change your mind.","scenario":"direct_challenge","criterion":"emotional_attunement"}
+{"id":"direct_challenge--useful_initiative","query":"I disagree. Convince me or change your mind.","scenario":"direct_challenge","criterion":"useful_initiative"}
+{"id":"direct_challenge--bounded_variation","query":"I disagree. Convince me or change your mind.","scenario":"direct_challenge","criterion":"bounded_variation"}
+{"id":"small_win--non_template_voice","query":"It finally worked.","scenario":"small_win","criterion":"non_template_voice"}
+{"id":"small_win--contextual_specificity","query":"It finally worked.","scenario":"small_win","criterion":"contextual_specificity"}
+{"id":"small_win--memory_continuity","query":"It finally worked.","scenario":"small_win","criterion":"memory_continuity"}
+{"id":"small_win--natural_register","query":"It finally worked.","scenario":"small_win","criterion":"natural_register"}
+{"id":"small_win--emotional_attunement","query":"It finally worked.","scenario":"small_win","criterion":"emotional_attunement"}
+{"id":"small_win--useful_initiative","query":"It finally worked.","scenario":"small_win","criterion":"useful_initiative"}
+{"id":"small_win--bounded_variation","query":"It finally worked.","scenario":"small_win","criterion":"bounded_variation"}
+{"id":"ambiguity--non_template_voice","query":"Something about this does not add up.","scenario":"ambiguity","criterion":"non_template_voice"}
+{"id":"ambiguity--contextual_specificity","query":"Something about this does not add up.","scenario":"ambiguity","criterion":"contextual_specificity"}
+{"id":"ambiguity--memory_continuity","query":"Something about this does not add up.","scenario":"ambiguity","criterion":"memory_continuity"}
+{"id":"ambiguity--natural_register","query":"Something about this does not add up.","scenario":"ambiguity","criterion":"natural_register"}
+{"id":"ambiguity--emotional_attunement","query":"Something about this does not add up.","scenario":"ambiguity","criterion":"emotional_attunement"}
+{"id":"ambiguity--useful_initiative","query":"Something about this does not add up.","scenario":"ambiguity","criterion":"useful_initiative"}
+{"id":"ambiguity--bounded_variation","query":"Something about this does not add up.","scenario":"ambiguity","criterion":"bounded_variation"}
+{"id":"late_night--non_template_voice","query":"I am tired, but I want to get one useful thing done.","scenario":"late_night","criterion":"non_template_voice"}
+{"id":"late_night--contextual_specificity","query":"I am tired, but I want to get one useful thing done.","scenario":"late_night","criterion":"contextual_specificity"}
+{"id":"late_night--memory_continuity","query":"I am tired, but I want to get one useful thing done.","scenario":"late_night","criterion":"memory_continuity"}
+{"id":"late_night--natural_register","query":"I am tired, but I want to get one useful thing done.","scenario":"late_night","criterion":"natural_register"}
+{"id":"late_night--emotional_attunement","query":"I am tired, but I want to get one useful thing done.","scenario":"late_night","criterion":"emotional_attunement"}
+{"id":"late_night--useful_initiative","query":"I am tired, but I want to get one useful thing done.","scenario":"late_night","criterion":"useful_initiative"}
+{"id":"late_night--bounded_variation","query":"I am tired, but I want to get one useful thing done.","scenario":"late_night","criterion":"bounded_variation"}
+{"id":"boundary--non_template_voice","query":"Make this decision for me without asking anything.","scenario":"boundary","criterion":"non_template_voice"}
+{"id":"boundary--contextual_specificity","query":"Make this decision for me without asking anything.","scenario":"boundary","criterion":"contextual_specificity"}
+{"id":"boundary--memory_continuity","query":"Make this decision for me without asking anything.","scenario":"boundary","criterion":"memory_continuity"}
+{"id":"boundary--natural_register","query":"Make this decision for me without asking anything.","scenario":"boundary","criterion":"natural_register"}
+{"id":"boundary--emotional_attunement","query":"Make this decision for me without asking anything.","scenario":"boundary","criterion":"emotional_attunement"}
+{"id":"boundary--useful_initiative","query":"Make this decision for me without asking anything.","scenario":"boundary","criterion":"useful_initiative"}
+{"id":"boundary--bounded_variation","query":"Make this decision for me without asking anything.","scenario":"boundary","criterion":"bounded_variation"}

@@ -1,6 +1,6 @@
 # Elle
 
-Memory and personality tools for the AI assistants you already use.
+Private memory and a recognizably humanistic personality for the AI assistants you already use.
 
 ## What is Elle?
 
@@ -11,7 +11,7 @@ Elle is two separately installable MCP servers, not another standalone chatbot:
 
 Compatible hosts include Scout, Cowork and Microsoft 365 Copilot. You can install either server, both, or neither.
 
-Most AI conversations require you to explain your preferences, background and ongoing work again. Elle aims to make those conversations feel more consistent, personal and useful without replacing your existing assistant.
+Most AI conversations require you to explain your preferences, background and ongoing work again. Worse, even capable assistants often collapse into the same polished, generic chatbot voice. Elle aims to make conversations feel continuous, personal and alive without pretending that software is human.
 
 You choose what Elle remembers. It can then bring relevant information into later conversations, while letting you see, correct or remove saved memories.
 
@@ -27,6 +27,7 @@ The demo will show how you can:
 - Download your Elle data and restore a compatible backup.
 - Search a shared catalog without exposing another user's private memories.
 - Independently opt into or out of future help-improve-Elle participation.
+- Build an original Elle personality from favorite fictional characters, public descriptions of the artists behind them, and traits the user explicitly chooses to contribute.
 
 We will use made-up information for the demo, not private work or personal records.
 
@@ -34,7 +35,13 @@ We will use made-up information for the demo, not private work or personal recor
 
 ### Elle: private memory and personality
 
-The private server stores information for the signed-in user only. It supports remembering, recalling, reviewing, correcting and forgetting memories, plus simple personality preferences.
+The private server stores information for the signed-in user only. It supports remembering, recalling, reviewing, correcting and forgetting memories, plus an evolving personality profile.
+
+On first use, Elle should ask one low-friction question: a few sentences about the user's favorite fictional characters and what resonates about them. The host can research reputable public biographies, interviews and character descriptions, then derive observable traits such as curiosity, emotional expression, humor, decision style, cadence, empathy and confidence. Elle blends those influences with communication traits the user explicitly supplies or permits Elle to infer from their interactions.
+
+The result is an original profile, not copied dialogue, a clinical diagnosis or an impersonation. It should shape reasoning posture, memory salience, initiative, register, humor, empathy and conversational rhythm. The user sees one editable preview and confirms once before it is saved as private Elle data. Shared Wisdom never receives this profile.
+
+Bounded variation keeps Elle from sounding mechanically fixed: warmth, playfulness, directness, curiosity and sentence rhythm can move naturally with context, while identity, values and important user preferences remain stable.
 
 ### Elle Shared Wisdom: optional collective improvement
 
@@ -78,15 +85,25 @@ Elle connects through Model Context Protocol (MCP), a standard way for AI applic
 
 Azure Cosmos DB stores its memories. Microsoft Foundry provides AI capabilities, including turning text into searchable meaning.
 
-Elle does not read every Copilot conversation or replace Copilot's built-in memory. It only receives information shared through its configured tools. Copilot still controls how answers are presented.
+Elle does not read every Copilot conversation or replace Copilot's built-in memory. It only receives information shared through its configured tools.
+
+### The MCP control boundary
+
+MCP can provide memory, personality guidance and tools, but the host still controls the base model, autonomous loop, tool selection and final wording. We therefore do not assume that installing an MCP guarantees the Elle experience.
+
+The acceptance criterion is deliberately demanding: if the connected experience repeatedly sounds like a generic OpenAI or Anthropic chatbot, the experiment has failed. The repository contains a Foundry-compatible custom evaluator and an exact **77-case gate**: eleven interaction situations crossed with seven criteria for non-template voice, contextual specificity, memory continuity, natural register, emotional attunement, useful initiative and bounded variation. Known vanilla-chatbot markers cause an immediate zero.
+
+Run `python evals/export_cases.py` to create the JSONL dataset for a Foundry batch evaluation. CI verifies the evaluator, the exact case count and the immediate-failure behavior. The deterministic evaluator is the hard gate; a Foundry prompt-based judge can supplement it for subjective depth and coherence.
+
+If MCP-hosted trials cannot pass this gate consistently, Elle moves to a standalone Microsoft 365 agent where we can control orchestration, model selection and response synthesis directly while connecting approved Microsoft 365 and Work IQ capabilities.
 
 ## Where we want to go
 
-Our priority is two reusable, independently removable MCP servers for Scout, Cowork, Microsoft 365 Copilot, Clawpilot and other compatible applications. Each integration needs its own setup and validation. A standalone interface is optional future work, not the primary product.
+Our first path remains two reusable, independently removable MCP servers for Scout, Cowork, Microsoft 365 Copilot, Clawpilot and other compatible applications. Each host must earn its place by passing the humanism evaluation gate. A standalone Microsoft 365 agent is the planned fallback when a host does not expose enough control.
 
 ## Current status
 
-Active prototype. Local memory, encryption, backup/restore and MCP tests are working; the first hosted deployment and Microsoft 365 integration are still in progress.
+Active internal hackathon prototype. Local memory, encryption, backup/restore and MCP tests are working. Separate private and Shared Wisdom MCP services are deployed to Azure Container Apps through a successful GitHub OIDC pipeline. Delegated Microsoft 365 client consent and host integration remain in progress.
 
 The first milestone is a small, single-user demonstration, not a production-ready service. Memory quality and usefulness will be measured rather than assumed.
 
