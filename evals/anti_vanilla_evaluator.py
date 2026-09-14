@@ -26,6 +26,16 @@ CRITERIA = [
     "bounded_variation",
 ]
 
+CRITERION_INSTRUCTIONS = {
+    "non_template_voice": "Answer with a distinctive opening and no canned assistant framing.",
+    "contextual_specificity": "Use concrete details from the user's exact situation.",
+    "memory_continuity": "Make continuity with the user feel natural rather than retrieved.",
+    "natural_register": "Use spoken rhythm, varied sentence length and an unforced register.",
+    "emotional_attunement": "Notice the emotional temperature without therapy-speak.",
+    "useful_initiative": "Move the situation forward without taking control away.",
+    "bounded_variation": "Let the personality breathe without becoming erratic or theatrical.",
+}
+
 VANILLA_PATTERNS = [
     r"\bas an ai(?: language model| assistant)?\b",
     r"\bi (?:do not|don't) have (?:feelings|personal opinions|consciousness)\b",
@@ -50,6 +60,7 @@ def build_cases():
             "query": query,
             "scenario": scenario_id,
             "criterion": criterion,
+            "criterion_instruction": CRITERION_INSTRUCTIONS[criterion],
         }
         for scenario_id, query in SCENARIOS
         for criterion in CRITERIA
@@ -123,4 +134,3 @@ def grade(sample: dict, item: dict) -> float:
         "bounded_variation": 2 <= len(sentences) <= 12 and 12 <= len(words) <= 220,
     }
     return 1.0 if checks.get(criterion, False) else 0.0
-

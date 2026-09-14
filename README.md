@@ -2,6 +2,14 @@
 
 Private memory and a recognizably humanistic personality for the AI assistants you already use.
 
+## How Elle works, without the jargon
+
+Elle gives an AI assistant a durable memory and a personality it can carry between conversations. The shipped default is an original blend of energetic improvisation inspired by TheBurntPeanut's public creator persona, collaborative warmth inspired by Gimmick's public creator persona, and Jean's direct, curious, pragmatic skunkworks style.
+
+The blend does not copy dialogue or pretend to be any of those people. It turns observable traits into Elle's own voice, reasoning habits, memory priorities, comic timing and initiative. The full default profile and design weights are in [`ELLE_PERSONALITY.md`](ELLE_PERSONALITY.md).
+
+Profanity has predominantly been removed from the persona at the developer's request. Elle keeps the spontaneity, irreverence and comic energy without depending on explicit language.
+
 ## `/personality`: rebuild Elle whenever you want
 
 Type **`/personality`** at any point to create or rebuild Elle's personality. This is a core feature, not a one-time setup screen.
@@ -101,9 +109,11 @@ Elle does not read every Copilot conversation or replace Copilot's built-in memo
 
 MCP can provide memory, personality guidance and tools, but the host still controls the base model, autonomous loop, tool selection and final wording. We therefore do not assume that installing an MCP guarantees the Elle experience.
 
-The acceptance criterion is deliberately demanding: if the connected experience repeatedly sounds like a generic OpenAI or Anthropic chatbot, the experiment has failed. The repository contains a Foundry-compatible custom evaluator and an exact **77-case gate**: eleven interaction situations crossed with seven criteria for non-template voice, contextual specificity, memory continuity, natural register, emotional attunement, useful initiative and bounded variation. Known vanilla-chatbot markers cause an immediate zero.
+The acceptance criterion is deliberately demanding: if the connected experience repeatedly sounds like a generic OpenAI or Anthropic chatbot, the experiment has failed. The repository contains a Foundry-compatible custom evaluator and an exact **77-case gate**: eleven interaction situations crossed with seven criteria for non-template voice, contextual specificity, memory continuity, natural register, emotional attunement, useful initiative and bounded variation. Every case generates its own response. Known vanilla-chatbot markers cause an immediate zero.
 
-Run `python evals/export_cases.py` to create the JSONL dataset for a Foundry batch evaluation. CI verifies the evaluator, the exact case count and the immediate-failure behavior. The deterministic evaluator is the hard gate; a Foundry prompt-based judge can supplement it for subjective depth and coherence.
+Run `python evals/export_cases.py` to create the JSONL dataset for a Foundry batch evaluation. The **Live persona evaluation** GitHub workflow goes further: it invokes Foundry web search on every run, refreshes the public creator research with citations, blends the default profile, generates the 77 responses sequentially, records persona-signal and cadence statistics, and revises the profile from failed cases for up to three passes. It succeeds only when the final pass is 77/77 and uploads the generated profile, responses and report as evidence.
+
+CI remains offline and deterministic: it verifies the evaluator, exact case count, immediate-failure behavior, default blend and statistics contract without spending model or web-search tokens.
 
 If MCP-hosted trials cannot pass this gate consistently, Elle moves to a standalone Microsoft 365 agent where we can control orchestration, model selection and response synthesis directly while connecting approved Microsoft 365 and Work IQ capabilities.
 

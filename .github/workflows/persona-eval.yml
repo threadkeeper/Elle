@@ -1,0 +1,47 @@
+name: Live persona evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: Maximum profile optimization passes
+        required: true
+        default: "3"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: live-persona-evaluation
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    environment: demo
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Azure OIDC login
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Research, build and run 77 evaluations
+        env:
+          ELLE_FOUNDRY_ENDPOINT: https://foundryjva001.openai.azure.com
+          ELLE_EVAL_MODEL: o4-mini
+        run: python evals/run_foundry_persona_evals.py --iterations "${{ inputs.iterations }}"
+      - name: Upload evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: elle-persona-evaluation
+          path: evals/results/
+          if-no-files-found: error
+          retention-days: 30
+
