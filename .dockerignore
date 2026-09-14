@@ -1,0 +1,12 @@
+**
+!rust/
+!rust/Cargo.toml
+!rust/Cargo.lock
+!rust/src/
+!rust/src/**
+!app/
+!app/wisdom/
+!app/wisdom/catalog.json
+!Dockerfile
+!.cargo/
+!.cargo/config.toml

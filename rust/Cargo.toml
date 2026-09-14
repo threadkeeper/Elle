@@ -1,0 +1,29 @@
+[package]
+name = "elle"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "User-controlled encrypted memory and personality tools."
+publish = false
+
+[dependencies]
+# Reused from the source project's locked dependency set.
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+base64 = "0.22.1"
+ring = "0.17.14"
+zeroize = "1.9.0"
+sha2 = "0.10.9"
+zstd = "0.13.3"
+ureq = "2.12"
+# A maintained HTTP parser avoids extending the prototype's handwritten transport.
+tiny_http = "0.12.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

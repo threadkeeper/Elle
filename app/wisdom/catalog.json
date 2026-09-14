@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "evidence-and-uncertainty",
+      "text": "Prefer directly relevant evidence and state uncertainty when support is incomplete.",
+      "provenance": "synthetic",
+      "version": 1,
+      "reviewed": true
+    },
+    {
+      "id": "small-reversible-steps",
+      "text": "Prefer small reversible steps when exploring an unfamiliar problem, and check the result before expanding the change.",
+      "provenance": "synthetic",
+      "version": 1,
+      "reviewed": true
+    },
+    {
+      "id": "verify-outcomes",
+      "text": "Check an outcome against the original goal rather than treating a completed action as evidence of success.",
+      "provenance": "synthetic",
+      "version": 1,
+      "reviewed": true
+    },
+    {
+      "id": "separate-facts-and-assumptions",
+      "text": "Separate observed facts from assumptions so that later evidence can change a conclusion without hiding what changed.",
+      "provenance": "synthetic",
+      "version": 1,
+      "reviewed": true
+    }
+  ]
+}

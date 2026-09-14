@@ -1,0 +1,198 @@
+//! MCP-first hosts: local stdio for development and authenticated HTTP for Azure.
+
+use std::env;
+use std::fs::{self, OpenOptions};
+use std::io::{self, BufRead, Read, Write};
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
+use std::sync::Arc;
+
+use elle::auth::EntraVerifier;
+use elle::azure::{CosmosRepository, FoundryClient, ManagedIdentityCredential};
+use elle::encryption::FieldCipher;
+use elle::error::{Error, Result};
+use elle::file_repository::FileRepository;
+use elle::identity::OwnerId;
+use elle::mcp::{self, MAX_MESSAGE_BYTES};
+use elle::service::MemoryService;
+use zeroize::Zeroizing;
+
+fn main() -> ExitCode {
+    match run() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("Elle: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn run() -> Result<()> {
+    let args: Vec<String> = env::args().skip(1).collect();
+    if args.is_empty() || args == ["--help"] {
+        println!(
+            "Elle MCP server\nCommands: serve | stdio | export <file> | restore <file>\n\
+            Requires ELLE_MCP_ROLE=private|wisdom. Local commands also require\n\
+            ELLE_LOCAL_DEV=1, ELLE_TENANT_ID, ELLE_USER_ID, ELLE_DATA_DIR,\n\
+            ELLE_FIELD_ENCRYPTION_KEY (base64 32 bytes). Export/restore also require\n\
+            ELLE_ARCHIVE_PASSPHRASE. Never put passwords in chat or source files.\n\
+            serve uses Entra bearer authentication and Cosmos managed identity.\n\
+            See README for required deployment configuration."
+        );
+        return Ok(());
+    }
+    if args == ["serve"] {
+        let role = mcp::ServerRole::parse(&required("ELLE_MCP_ROLE")?)?;
+        let tenant = required("ELLE_TENANT_ID")?;
+        let audience = required("ELLE_API_AUDIENCE")?;
+        let allowed_user = required("ELLE_ALLOWED_USER_ID")?;
+        let origin = required("ELLE_PUBLIC_ORIGIN")?;
+        let key = Zeroizing::new(required("ELLE_FIELD_ENCRYPTION_KEY")?);
+        let cosmos = required("ELLE_COSMOS_ENDPOINT")?;
+        let cosmos = cosmos.trim_end_matches('/');
+        let credential = Arc::new(ManagedIdentityCredential::from_env(&[
+            cosmos,
+            "https://cognitiveservices.azure.com/",
+        ])?);
+        let repository = CosmosRepository::new(
+            cosmos,
+            &required("ELLE_COSMOS_DATABASE")?,
+            &required("ELLE_COSMOS_CONTAINER")?,
+            credential.clone(),
+        )?;
+        let embedder: Option<Box<dyn elle::embeddings::Embedder>> =
+            match (role, env::var("ELLE_FOUNDRY_ENDPOINT")) {
+                (mcp::ServerRole::Private, Ok(endpoint)) => Some(Box::new(FoundryClient::new(
+                    &endpoint,
+                    &required("ELLE_CHAT_DEPLOYMENT")?,
+                    &required("ELLE_EMBEDDING_DEPLOYMENT")?,
+                    required("ELLE_EMBEDDING_DIMENSIONS")?
+                        .parse()
+                        .map_err(|_| Error::Configuration("Invalid embedding dimensions"))?,
+                    credential,
+                )?)),
+                (mcp::ServerRole::SharedWisdom, _) => None,
+                (mcp::ServerRole::Private, Err(env::VarError::NotPresent)) => {
+                    eprintln!("Elle: Foundry not configured; using explicit keyword retrieval");
+                    None
+                }
+                (mcp::ServerRole::Private, Err(_)) => {
+                    return Err(Error::Configuration(
+                        "Invalid Foundry endpoint configuration",
+                    ))
+                }
+            };
+        let service = MemoryService::new(
+            Box::new(repository),
+            FieldCipher::from_base64(&key)?,
+            embedder,
+        );
+        return elle::server::serve(
+            "0.0.0.0:8080",
+            &origin,
+            EntraVerifier::new(&tenant, &audience, &allowed_user)?,
+            service,
+            role,
+        );
+    }
+    if env::var("ELLE_LOCAL_DEV").as_deref() != Ok("1") {
+        return Err(Error::Configuration(
+            "Local host requires explicit ELLE_LOCAL_DEV=1",
+        ));
+    }
+    let owner = OwnerId::new(&required("ELLE_TENANT_ID")?, &required("ELLE_USER_ID")?)?;
+    let role = mcp::ServerRole::parse(&required("ELLE_MCP_ROLE")?)?;
+    let key = Zeroizing::new(required("ELLE_FIELD_ENCRYPTION_KEY")?);
+    let cipher = FieldCipher::from_base64(&key)?;
+    let directory = PathBuf::from(required("ELLE_DATA_DIR")?);
+    let repository = FileRepository::open(&directory.join(role.name()))?;
+    // Azure adapters are callable library components; this host uses local storage
+    // and explicit keyword retrieval until the authenticated Azure host is wired.
+    let mut service = MemoryService::new(Box::new(repository), cipher, None);
+    match args.as_slice() {
+        [command] if command == "stdio" => {
+            eprintln!("Elle: local development MCP; keyword retrieval; trusted local client only");
+            let stdin = io::stdin();
+            let mut input = stdin.lock();
+            let stdout = io::stdout();
+            let mut output = stdout.lock();
+            loop {
+                let mut message = Vec::new();
+                let count = input
+                    .by_ref()
+                    .take((MAX_MESSAGE_BYTES + 2) as u64)
+                    .read_until(b'\n', &mut message)
+                    .map_err(|_| Error::Transport("Cannot read MCP input"))?;
+                if count == 0 {
+                    break;
+                }
+                if message.last() == Some(&b'\n') {
+                    message.pop();
+                }
+                if message.last() == Some(&b'\r') {
+                    message.pop();
+                }
+                if message.len() > MAX_MESSAGE_BYTES {
+                    return Err(Error::InvalidInput("MCP input exceeds message size limit"));
+                }
+                if let Some(response) = mcp::handle_for_role(&message, &owner, &mut service, role) {
+                    writeln!(output, "{response}")
+                        .and_then(|()| output.flush())
+                        .map_err(|_| Error::Transport("Cannot write MCP response"))?;
+                }
+            }
+            Ok(())
+        }
+        [command, path] if command == "export" => {
+            let passphrase = Zeroizing::new(required("ELLE_ARCHIVE_PASSPHRASE")?);
+            let archive = service.export(&owner, &passphrase)?;
+            let mut output = OpenOptions::new()
+                .create_new(true)
+                .write(true)
+                .open(path)
+                .map_err(|_| Error::Storage("Export target exists or is inaccessible"))?;
+            output
+                .write_all(&archive)
+                .and_then(|()| output.sync_all())
+                .map_err(|_| Error::Storage("Archive download failed"))?;
+            println!("Encrypted Elle backup exported.");
+            Ok(())
+        }
+        [command, path] if command == "restore" => {
+            let passphrase = Zeroizing::new(required("ELLE_ARCHIVE_PASSPHRASE")?);
+            let archive = read_archive(Path::new(path))?;
+            let report = service.restore(&owner, &archive, &passphrase)?;
+            println!(
+                "{}",
+                serde_json::to_string(&report)
+                    .map_err(|_| Error::Integrity("Cannot serialize restore report"))?
+            );
+            if report.failure.is_some() {
+                return Err(Error::Storage(
+                    "Restore was partial; review the report and retry",
+                ));
+            }
+            Ok(())
+        }
+        _ => Err(Error::InvalidInput("Unknown command; use --help")),
+    }
+}
+
+fn required(name: &'static str) -> Result<String> {
+    env::var(name)
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or(Error::Configuration(name))
+}
+
+fn read_archive(path: &Path) -> Result<Vec<u8>> {
+    let file = fs::File::open(path).map_err(|_| Error::Storage("Cannot open backup file"))?;
+    let mut bytes = Vec::new();
+    file.take(17 * 1024 * 1024 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| Error::Storage("Cannot read backup file"))?;
+    if bytes.len() > 17 * 1024 * 1024 {
+        return Err(Error::InvalidInput("Backup exceeds file size limit"));
+    }
+    Ok(bytes)
+}

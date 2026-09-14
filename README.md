@@ -1,16 +1,23 @@
 # Elle
 
-An AI assistant that remembers what matters, so you do not have to keep starting over.
+Memory and personality tools for the AI assistants you already use.
 
 ## What is Elle?
 
-Most AI conversations require you to explain your preferences, background and ongoing work again. Elle aims to make those conversations feel more consistent, personal and useful.
+Elle is two separately installable MCP servers, not another standalone chatbot:
+
+- **Elle** adds private, user-controlled memory and personality tools.
+- **Elle Shared Wisdom** is an optional way to use reviewed shared guidance and, in a future release, help improve Elle by contributing generalized lessons.
+
+Compatible hosts include Scout, Cowork and Microsoft 365 Copilot. You can install either server, both, or neither.
+
+Most AI conversations require you to explain your preferences, background and ongoing work again. Elle aims to make those conversations feel more consistent, personal and useful without replacing your existing assistant.
 
 You choose what Elle remembers. It can then bring relevant information into later conversations, while letting you see, correct or remove saved memories.
 
 ## Our first demo
 
-Elle will appear as a named agent you select inside Microsoft 365 Copilot.
+The first cloud demo will connect both MCP servers separately to Microsoft 365 Copilot. Scout and Cowork connections will use each host's supported MCP configuration. The host decides when to call tools and how to present the answer; installing Elle does not automatically change every conversation.
 
 The demo will show how you can:
 - Ask Elle to remember a preference or project detail.
@@ -18,8 +25,24 @@ The demo will show how you can:
 - Get responses with a consistent, configurable personality.
 - Review, correct and forget saved information.
 - Download your Elle data and restore a compatible backup.
+- Search a shared catalog without exposing another user's private memories.
+- Independently opt into or out of future help-improve-Elle participation.
 
 We will use made-up information for the demo, not private work or personal records.
+
+## Two independent MCP servers
+
+### Elle: private memory and personality
+
+The private server stores information for the signed-in user only. It supports remembering, recalling, reviewing, correcting and forgetting memories, plus simple personality preferences.
+
+### Elle Shared Wisdom: optional collective improvement
+
+The shared server is positioned like an optional "help improve the product" choice, but it is more explicit than a diagnostics switch: future contributions may contain generalized lesson content. Installing this server does not opt you in, and it cannot query your private Elle memory store.
+
+The first demo exposes a small reviewed, non-private shared catalog and an independent opt-in setting. It does **not** yet collect conversations or publish private-derived lessons. Before contribution is enabled, the project must disclose exactly what is collected, apply automated privacy screening, and provide controls to inspect and delete retained contributions.
+
+Removing either MCP connection stops that server's future access. It does not automatically delete data already stored by that server; deletion is a separate, explicit control.
 
 ## Take your data with you
 
@@ -31,7 +54,7 @@ Backups will be password-protected. File transfer and password entry will use an
 
 ## Encryption and privacy
 
-These are planned Elle safeguards, not a claim that an Elle release is already available.
+The current source implements the core cryptography, user partitioning, Entra token verification and MCP role separation. Cloud behavior remains subject to deployment and integration testing.
 
 - **Encryption in transit:** HTTPS/TLS will protect connections between the client and Elle.
 - **Encrypted memory text:** we plan to adapt the source project's AES-256-GCM field encryption, with separate per-user keys derived using HKDF-SHA256. This protects selected text fields and detects tampering. Elle will require encryption configuration rather than silently saving those fields as plaintext.
@@ -59,12 +82,16 @@ Elle does not read every Copilot conversation or replace Copilot's built-in memo
 
 ## Where we want to go
 
-After the first demo, we aim to support Scout, Clawpilot and other compatible MCP applications, plus a standalone Elle experience. Each integration will need its own setup and validation.
+Our priority is two reusable, independently removable MCP servers for Scout, Cowork, Microsoft 365 Copilot, Clawpilot and other compatible applications. Each integration needs its own setup and validation. A standalone interface is optional future work, not the primary product.
 
 ## Current status
 
-Proposal and development stage. There is no working Elle release in this repository yet. The source project contains encryption and export/restore components, but adapting them to Elle and its Microsoft 365 integration is still work to do.
+Active prototype. Local memory, encryption, backup/restore and MCP tests are working; the first hosted deployment and Microsoft 365 integration are still in progress.
 
 The first milestone is a small, single-user demonstration, not a production-ready service. Memory quality and usefulness will be measured rather than assumed.
 
 Elle is Jean Van Iddekinge's personal project, adapted from his own pre-existing hobby work. It is not an official Microsoft product or an endorsed Microsoft service.
+
+## License
+
+Elle uses the [MIT License](LICENSE), a permissive license also used by Microsoft and Azure sample and accelerator repositories. The Microsoft and Azure names remain their respective owners' trademarks; the license does not imply endorsement.

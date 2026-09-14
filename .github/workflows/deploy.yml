@@ -1,0 +1,59 @@
+name: Deploy demo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: demo
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.97.1
+          components: rustfmt, clippy
+      - name: Check formatting
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - name: Test
+        run: cargo test --locked --all-targets --all-features
+      - name: Azure OIDC login
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy shared image and verify both apps
+        shell: pwsh
+        working-directory: .
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+          ACR_NAME: ${{ vars.ACR_NAME }}
+          PRIVATE_APP_NAME: ${{ vars.PRIVATE_APP_NAME }}
+          WISDOM_APP_NAME: ${{ vars.WISDOM_APP_NAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          ./scripts/deploy.ps1 `
+            -SubscriptionId $env:AZURE_SUBSCRIPTION_ID `
+            -ResourceGroup $env:RESOURCE_GROUP `
+            -RegistryName $env:ACR_NAME `
+            -PrivateAppName $env:PRIVATE_APP_NAME `
+            -WisdomAppName $env:WISDOM_APP_NAME `
+            -ImageTag $env:IMAGE_TAG

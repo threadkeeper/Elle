@@ -1,0 +1,9 @@
+/rust/target/
+/.local/
+/.cargo/approved-feed.toml
+/.env
+*.elle-backup
+*.key
+*.pem
+*.pfx
+*.p12
