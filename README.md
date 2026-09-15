@@ -102,6 +102,7 @@ Forgetting a memory will remove it from Elle's active memory and retrieval. It c
 Elle connects through Model Context Protocol (MCP), a standard way for AI applications to use external tools.
 
 Azure Cosmos DB stores its memories. Microsoft Foundry provides AI capabilities, including turning text into searchable meaning.
+The demo uses a Foundry Model Router deployment as its primary chat endpoint and a dedicated embedding deployment for memory retrieval.
 
 Elle does not read every Copilot conversation or replace Copilot's built-in memory. It only receives information shared through its configured tools.
 

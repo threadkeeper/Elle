@@ -123,7 +123,8 @@ impl TokenProvider for ManagedIdentityCredential {
 ///
 /// Public-cloud `*.openai.azure.com` and `*.services.ai.azure.com` origins are supported.
 pub struct FoundryClient {
-    endpoint: String,
+    chat_endpoint: String,
+    embedding_endpoint: String,
     chat_deployment: String,
     embedding_deployment: String,
     dimensions: usize,
@@ -140,7 +141,27 @@ impl FoundryClient {
         dimensions: usize,
         credential: Arc<dyn TokenProvider>,
     ) -> Result<Self> {
-        let endpoint = foundry_origin(endpoint)?;
+        Self::with_endpoints(
+            endpoint,
+            chat_deployment,
+            endpoint,
+            embedding_deployment,
+            dimensions,
+            credential,
+        )
+    }
+
+    /// Configure chat and embedding deployments on distinct Foundry accounts.
+    pub fn with_endpoints(
+        chat_endpoint: &str,
+        chat_deployment: &str,
+        embedding_endpoint: &str,
+        embedding_deployment: &str,
+        dimensions: usize,
+        credential: Arc<dyn TokenProvider>,
+    ) -> Result<Self> {
+        let chat_endpoint = foundry_origin(chat_endpoint)?;
+        let embedding_endpoint = foundry_origin(embedding_endpoint)?;
         if !safe_segment(chat_deployment) || !safe_segment(embedding_deployment) {
             return Err(Error::Configuration(
                 "Invalid Foundry deployment identifier",
@@ -152,7 +173,8 @@ impl FoundryClient {
             ));
         }
         Ok(Self {
-            endpoint,
+            chat_endpoint,
+            embedding_endpoint,
             chat_deployment: chat_deployment.to_owned(),
             embedding_deployment: embedding_deployment.to_owned(),
             dimensions,
@@ -177,17 +199,28 @@ impl FoundryClient {
             "n": 1,
             "stream": false
         });
-        let body = self.post(&self.chat_deployment, "chat/completions", payload)?;
+        let body = self.post(
+            &self.chat_endpoint,
+            &self.chat_deployment,
+            "chat/completions",
+            payload,
+        )?;
         parse_completion(&body)
     }
 
-    fn post(&self, deployment: &str, operation: &str, payload: Value) -> Result<Vec<u8>> {
+    fn post(
+        &self,
+        endpoint: &str,
+        deployment: &str,
+        operation: &str,
+        payload: Value,
+    ) -> Result<Vec<u8>> {
         let token = Zeroizing::new(self.credential.token(MODEL_RESOURCE)?);
         validate_token(&token)?;
         let authorization = Zeroizing::new(format!("Bearer {}", token.as_str()));
         let url = format!(
             "{}/openai/deployments/{deployment}/{operation}?api-version=2024-10-21",
-            self.endpoint
+            endpoint
         );
         let response = checked_response(
             self.agent
@@ -209,6 +242,7 @@ impl Embedder for FoundryClient {
             ));
         }
         let body = self.post(
+            &self.embedding_endpoint,
             &self.embedding_deployment,
             "embeddings",
             json!({"input": text, "dimensions": self.dimensions, "encoding_format": "float"}),

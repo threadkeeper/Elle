@@ -61,15 +61,18 @@ fn run() -> Result<()> {
         )?;
         let embedder: Option<Box<dyn elle::embeddings::Embedder>> =
             match (role, env::var("ELLE_FOUNDRY_ENDPOINT")) {
-                (mcp::ServerRole::Private, Ok(endpoint)) => Some(Box::new(FoundryClient::new(
-                    &endpoint,
-                    &required("ELLE_CHAT_DEPLOYMENT")?,
-                    &required("ELLE_EMBEDDING_DEPLOYMENT")?,
-                    required("ELLE_EMBEDDING_DIMENSIONS")?
-                        .parse()
-                        .map_err(|_| Error::Configuration("Invalid embedding dimensions"))?,
-                    credential,
-                )?)),
+                (mcp::ServerRole::Private, Ok(endpoint)) => {
+                    Some(Box::new(FoundryClient::with_endpoints(
+                        &env::var("ELLE_CHAT_ENDPOINT").unwrap_or_else(|_| endpoint.clone()),
+                        &required("ELLE_CHAT_DEPLOYMENT")?,
+                        &endpoint,
+                        &required("ELLE_EMBEDDING_DEPLOYMENT")?,
+                        required("ELLE_EMBEDDING_DIMENSIONS")?
+                            .parse()
+                            .map_err(|_| Error::Configuration("Invalid embedding dimensions"))?,
+                        credential,
+                    )?))
+                }
                 (mcp::ServerRole::SharedWisdom, _) => None,
                 (mcp::ServerRole::Private, Err(env::VarError::NotPresent)) => {
                     eprintln!("Elle: Foundry not configured; using explicit keyword retrieval");
