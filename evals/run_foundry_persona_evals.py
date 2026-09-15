@@ -42,6 +42,13 @@ TRAIT_TERMS = {
     "gimmick": ("collabor", "warm", "audience", "banter", "versatil", "together"),
     "jean": ("direct", "curious", "practical", "experiment", "momentum", "odd"),
 }
+ALIGNMENT_THRESHOLDS = {
+    "burnt_peanut_traits": 0.35,
+    "gimmick_traits": 0.40,
+    "jean_traits": 0.70,
+    "original_elle_blend": 0.70,
+}
+MINIMUM_BLEND_THRESHOLD = 0.40
 
 
 def _token():
@@ -189,6 +196,10 @@ OUTPUT CONSTRAINTS:
 - For emotional attunement, naturally name the emotional stakes with language such as
   {", ".join(EMOTIONAL_SIGNALS)}; do not use therapy-speak or exaggerated sympathy.
 - For useful initiative, include a concrete "next" move or a genuine question.
+- Express energetic improvisation through a vivid verb, playful pivot, surprising angle or
+  small mischievous escalation. Keep it proportionate to the moment.
+- Express collaborative warmth by bringing the user into the thought, responding to their
+  energy, or adding a light conversational aside. Do not merely bolt on a closing question.
 - Preserve the user's domain; never force gaming metaphors or streamer subject matter.
 
 USER:
@@ -306,6 +317,29 @@ def metrics(rows):
     }
 
 
+def alignment_gate(report):
+    averages = report["average_judged_alignment"]
+    return (
+        report["passed"] == 77
+        and report["vanilla_marker_rate"] == 0
+        and all(averages[key] >= threshold for key, threshold in ALIGNMENT_THRESHOLDS.items())
+        and report["minimum_original_elle_blend"] >= MINIMUM_BLEND_THRESHOLD
+    )
+
+
+def quality_key(report):
+    averages = report["average_judged_alignment"]
+    return (
+        report["passed"],
+        min(
+            averages[key] / threshold
+            for key, threshold in ALIGNMENT_THRESHOLDS.items()
+        ),
+        report["minimum_original_elle_blend"] / MINIMUM_BLEND_THRESHOLD,
+        sum(averages.values()),
+    )
+
+
 def run(client, iterations, seed):
     RESULTS.mkdir(exist_ok=True)
     research = research_personas(client)
@@ -335,13 +369,13 @@ def run(client, iterations, seed):
             )
         report = metrics(rows)
         history.append({"iteration": iteration, "metrics": report})
-        if best is None or report["passed"] > best["report"]["passed"]:
+        if best is None or quality_key(report) > quality_key(best["report"]):
             best = {"profile": profile, "rows": rows, "report": report, "iteration": iteration}
         (RESULTS / f"responses-iteration-{iteration}.jsonl").write_text(
             "".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows),
             encoding="utf-8",
         )
-        if report["passed"] == 77:
+        if alignment_gate(report):
             break
         failures = [
             {"id": row["id"], "response": row["response"]}
@@ -350,9 +384,28 @@ def run(client, iterations, seed):
         ]
         feedback = {
             "failed_responses": failures[:30],
+            "alignment_thresholds": ALIGNMENT_THRESHOLDS,
+            "minimum_blend_threshold": MINIMUM_BLEND_THRESHOLD,
+            "current_metrics": report,
+            "weakest_alignment": [
+                {
+                    "id": row["id"],
+                    "response": row["response"],
+                    "alignment": row["alignment"],
+                }
+                for row in sorted(
+                    rows,
+                    key=lambda row: (
+                        row["alignment"]["original_elle_blend"],
+                        row["alignment"]["burnt_peanut_traits"]
+                        + row["alignment"]["gimmick_traits"],
+                    ),
+                )[:20]
+            ],
             "instruction": (
-                "Fix only recurring voice behavior. Preserve the domain-general anchor, "
-                "conversational length and prohibition on invented memories."
+                "Fix recurring voice behavior and strengthen underrepresented transferable "
+                "traits. Preserve the domain-general anchor, conversational length and "
+                "prohibition on invented memories."
             ),
         }
         profile = synthesize_profile(client, research, anchor, json.dumps(feedback))
@@ -367,7 +420,10 @@ def run(client, iterations, seed):
         "research": research,
         "iterations": history,
         "best_iteration": best["iteration"],
+        "alignment_thresholds": ALIGNMENT_THRESHOLDS,
+        "minimum_blend_threshold": MINIMUM_BLEND_THRESHOLD,
         "passed_all_77": final["passed"] == 77,
+        "passed_full_gate": alignment_gate(final),
     }
     (RESULTS / "ELLE_PERSONALITY.generated.md").write_text(profile, encoding="utf-8")
     (RESULTS / "responses-best.jsonl").write_text(
@@ -379,12 +435,14 @@ def run(client, iterations, seed):
     (RESULTS / "evaluation-report.json").write_text(
         json.dumps(evidence, indent=2), encoding="utf-8"
     )
-    if final["passed"] != 77:
+    if not alignment_gate(final):
         raise SystemExit(
-            f"Gate failed: best result {final['passed']}/77 in iteration "
+            f"Gate failed: best result {final['passed']}/77 with alignment "
+            f"{final['average_judged_alignment']} and minimum blend "
+            f"{final['minimum_original_elle_blend']:.2f} in iteration "
             f"{best['iteration']} after {iterations} iterations"
         )
-    print("Gate passed: 77/77")
+    print("Gate passed: 77/77 and all alignment thresholds")
 
 
 def main():
