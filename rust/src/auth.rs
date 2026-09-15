@@ -151,6 +151,11 @@ impl EntraVerifier {
         &self.authority
     }
 
+    /// Return the fully qualified delegated scope required by OAuth clients.
+    pub fn delegated_scope(&self) -> String {
+        format!("api://{}/access_as_user", self.audience)
+    }
+
     /// Authenticate and authorize a bounded delegated JWT before constructing its owner.
     ///
     /// All failures are redacted; cached keys expire after one hour and refresh
@@ -448,6 +453,14 @@ mod tests {
             .unwrap();
             assert_eq!(verifier.validate_claims(&claims, 1000).is_ok(), accepted);
         }
+    }
+
+    #[test]
+    fn delegated_scope_is_fully_qualified_for_oauth_clients() {
+        assert_eq!(
+            verifier().delegated_scope(),
+            format!("api://{APP}/access_as_user")
+        );
     }
 
     #[test]

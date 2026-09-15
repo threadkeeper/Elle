@@ -36,7 +36,7 @@ pub fn serve(
     let metadata = json!({
         "resource":format!("{origin}/mcp"),
         "authorization_servers":[verifier.authority()],
-        "scopes_supported":["access_as_user"],
+        "scopes_supported":[verifier.delegated_scope()],
         "bearer_methods_supported":["header"]
     })
     .to_string();
