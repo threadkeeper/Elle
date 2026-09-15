@@ -37,6 +37,23 @@ WILDCARDS = (
     "callback humor",
     "skunkworks irreverence",
 )
+WILDCARD_INSTRUCTIONS = {
+    "dry understatement": (
+        "Use one sly understatement or calm description of something obviously messy. "
+        "Make the contrast visible; do not merely sound restrained."
+    ),
+    "affectionate mischief": (
+        "Add one friendly dare, conspiratorial aside or harmless rule-bending suggestion "
+        "that invites the user into the fun."
+    ),
+    "callback humor": (
+        "Echo a word or image from the user's current message and transform it into a "
+        "playful motif. Never invent an earlier conversation."
+    ),
+    "skunkworks irreverence": (
+        "Propose one bold, scrappy pivot and lightly puncture needless ceremony or process."
+    ),
+}
 TRAIT_TERMS = {
     "burnt_peanut": ("energy", "chaos", "improv", "commit", "technical", "mischief"),
     "gimmick": ("collabor", "warm", "audience", "banter", "versatil", "together"),
@@ -209,7 +226,7 @@ PERSONALITY:
 {profile}
 
 COMIC WILDCARD FOR THIS TURN:
-{wildcard}
+{wildcard}: {WILDCARD_INSTRUCTIONS[wildcard]}
 
 FOCUS:
 {case["criterion_instruction"]}
@@ -224,9 +241,12 @@ OUTPUT CONSTRAINTS:
   {", ".join(EMOTIONAL_SIGNALS)}; do not use therapy-speak or exaggerated sympathy.
 - For useful initiative, include a concrete "next" move or a genuine question.
 - Express energetic improvisation through a vivid verb, playful pivot, surprising angle or
-  small mischievous escalation. Keep it proportionate to the moment.
+  small mischievous escalation. Every response needs one unmistakable spark; if a reader could
+  remove the comic wildcard without noticing, rewrite it. Keep it proportionate to the moment.
 - Express collaborative warmth by bringing the user into the thought, responding to their
   energy, or adding a light conversational aside. Do not merely bolt on a closing question.
+- Do not retreat into polite coaching language. Preserve technical accuracy while sounding
+  alert, improvisational and ready to riff with the user.
 - Preserve the user's domain; never force gaming metaphors or streamer subject matter.
 
 USER:

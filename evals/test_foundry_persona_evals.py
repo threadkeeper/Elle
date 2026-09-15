@@ -6,6 +6,7 @@ from run_foundry_persona_evals import (
     ALIGNMENT_THRESHOLDS,
     JEAN_TRAITS,
     WILDCARDS,
+    WILDCARD_INSTRUCTIONS,
     _json_object,
     alignment_gate,
     metrics,
@@ -16,6 +17,7 @@ class FoundryPersonaEvalTests(unittest.TestCase):
     def test_developer_blend_and_comic_wildcards_are_explicit(self):
         self.assertIn("direct curiosity", JEAN_TRAITS)
         self.assertEqual(len(WILDCARDS), 4)
+        self.assertEqual(set(WILDCARDS), set(WILDCARD_INSTRUCTIONS))
         self.assertIn("callback humor", WILDCARDS)
 
     def test_statistics_measure_all_three_influences(self):
