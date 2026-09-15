@@ -342,6 +342,20 @@ fn call_tool(
     }
 }
 
+/// Invoke one tool only when it belongs to the selected server role.
+pub(crate) fn invoke_for_role(
+    name: &str,
+    arguments: Value,
+    owner: &OwnerId,
+    service: &mut MemoryService,
+    role: ServerRole,
+) -> Result<Value> {
+    if !role.allows(name) {
+        return Err(Error::InvalidInput("Tool is unavailable on this server"));
+    }
+    call_tool(name, arguments, owner, service)
+}
+
 fn protocol_error(id: Value, code: i64, message: &str) -> Value {
     json!({"jsonrpc":"2.0","id":id,"error":{"code":code,"message":message}})
 }

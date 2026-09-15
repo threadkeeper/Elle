@@ -1,0 +1,423 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Elle Private Bridge",
+    "description": "Private Elle REST actions authenticated through Power Platform connector SSO and delegated Entra OAuth.",
+    "version": "1.0"
+  },
+  "host": "elle-private-vnet.yellowsky-9d92d540.swedencentral.azurecontainerapps.io",
+  "basePath": "/bridge",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "delegatedOAuth": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://login.microsoftonline.com/8d0fb62d-a3b4-445b-bdd6-7954ef2cb817/oauth2/v2.0/authorize",
+      "tokenUrl": "https://login.microsoftonline.com/8d0fb62d-a3b4-445b-bdd6-7954ef2cb817/oauth2/v2.0/token",
+      "scopes": {
+        "api://0479a728-6b4d-4d96-8693-ef766bc8e1fe/access_as_user": "Access private Elle tools as the signed-in user."
+      }
+    }
+  },
+  "security": [
+    {
+      "delegatedOAuth": [
+        "api://0479a728-6b4d-4d96-8693-ef766bc8e1fe/access_as_user"
+      ]
+    }
+  ],
+  "paths": {
+    "/elle_context": {
+      "post": {
+        "operationId": "ElleContext",
+        "summary": "Recall private Elle context",
+        "description": "Returns the authenticated user's relevant memories and personality guidance.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ContextRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private context",
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "/elle_list_memories": {
+      "post": {
+        "operationId": "ElleListMemories",
+        "summary": "List private Elle memories",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EmptyRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owned memories",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/elle_remember": {
+      "post": {
+        "operationId": "ElleRemember",
+        "summary": "Save a private Elle memory",
+        "description": "Stores a private memory in the authenticated user's partition.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RememberRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved memory",
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "/elle_correct": {
+      "post": {
+        "operationId": "ElleCorrect",
+        "summary": "Correct a private Elle memory",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CorrectRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Corrected memory",
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "/elle_forget": {
+      "post": {
+        "operationId": "ElleForget",
+        "summary": "Delete a private Elle memory",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ForgetRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deletion result",
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "/elle_personality": {
+      "post": {
+        "operationId": "EllePersonality",
+        "summary": "Open the private personality workshop",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EmptyRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Personality workshop",
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "/elle_set_personality": {
+      "post": {
+        "operationId": "ElleSetPersonality",
+        "summary": "Save a private Elle personality",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SetPersonalityRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved personality",
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "EmptyRequest": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "ContextRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query",
+        "limit"
+      ],
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        }
+      }
+    },
+    "MemoryPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content",
+        "category",
+        "source"
+      ],
+      "properties": {
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "fact",
+            "preference",
+            "project"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      }
+    },
+    "RememberRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "payload",
+        "idempotency_key",
+        "expires_at"
+      ],
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/MemoryPayload"
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "expires_at": {
+          "type": "integer",
+          "format": "int64",
+          "x-nullable": true,
+          "minimum": 0
+        }
+      }
+    },
+    "CorrectRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "expected_version",
+        "payload"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1
+        },
+        "payload": {
+          "$ref": "#/definitions/MemoryPayload"
+        }
+      }
+    },
+    "ForgetRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "expected_version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1
+        }
+      }
+    },
+    "Personality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tone",
+        "detail"
+      ],
+      "properties": {
+        "tone": {
+          "type": "string",
+          "enum": [
+            "warm",
+            "neutral",
+            "direct"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "enum": [
+            "concise",
+            "balanced",
+            "detailed"
+          ]
+        },
+        "profile": {
+          "$ref": "#/definitions/HumanProfile",
+          "x-nullable": true
+        }
+      }
+    },
+    "HumanProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "essence",
+        "voice",
+        "reasoning",
+        "memory",
+        "traits"
+      ],
+      "properties": {
+        "essence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "voice": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "reasoning": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "memory": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "traits": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      }
+    },
+    "SetPersonalityRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "settings",
+        "expected_version"
+      ],
+      "properties": {
+        "settings": {
+          "$ref": "#/definitions/Personality"
+        },
+        "expected_version": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

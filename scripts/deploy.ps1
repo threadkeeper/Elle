@@ -100,6 +100,10 @@ foreach ($app in @($PrivateAppName, $WisdomAppName)) {
     if (-not (Test-Endpoint -Uri "$url/mcp" -Method 'POST' -ExpectedStatus 401)) {
         throw 'Container app anonymous authentication verification failed.'
     }
+    if ($app -eq $PrivateAppName -and
+        -not (Test-Endpoint -Uri "$url/bridge/elle_context" -Method 'POST' -ExpectedStatus 401)) {
+        throw 'Private bridge authentication verification failed.'
+    }
     $verifiedUrls += "$url/mcp"
 }
 

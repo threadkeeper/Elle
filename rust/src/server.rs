@@ -18,6 +18,12 @@ use crate::service::MemoryService;
 
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
+struct RequestContext<'a> {
+    origin: &'a str,
+    metadata: &'a str,
+    challenge: &'a Header,
+}
+
 /// Serve a single-owner, sequential JSON MCP endpoint until the listener fails.
 ///
 /// `address` is the internal HTTP bind address, such as `0.0.0.0:8080`.
@@ -49,9 +55,11 @@ pub fn serve(
         // A disconnected caller must not terminate the shared listener.
         if handle_request(
             request,
-            &origin,
-            &metadata,
-            &challenge_header,
+            &RequestContext {
+                origin: &origin,
+                metadata: &metadata,
+                challenge: &challenge_header,
+            },
             &mut verifier,
             &mut service,
             role,
@@ -65,23 +73,21 @@ pub fn serve(
 
 fn handle_request(
     mut request: Request,
-    origin: &str,
-    metadata: &str,
-    challenge: &Header,
+    context: &RequestContext<'_>,
     verifier: &mut EntraVerifier,
     service: &mut MemoryService,
     role: mcp::ServerRole,
 ) -> Result<()> {
     let request_id = REQUEST_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let method = format!("{:?}", request.method());
-    let path = request.url().split('?').next().unwrap_or("");
+    let path = request.url().split('?').next().unwrap_or("").to_owned();
     eprintln!(
         "Elle diagnostic: request_id={request_id} role={} method={method} path={path} event=request_started",
         role.name()
     );
     match single_header(&request, "Origin") {
         Ok(None) => {}
-        Ok(Some(value)) if value == origin => {}
+        Ok(Some(value)) if value == context.origin => {}
         _ => {
             eprintln!(
                 "Elle diagnostic: request_id={request_id} role={} status=403 error=forbidden_origin",
@@ -90,12 +96,23 @@ fn handle_request(
             return reply(request, 403, r#"{"error":"Forbidden origin"}"#, None);
         }
     }
-    match (request.method(), request.url()) {
+    if request.method() == &Method::Post && path.starts_with("/bridge/") {
+        return handle_bridge(
+            request,
+            request_id,
+            &path,
+            context.challenge,
+            verifier,
+            service,
+            role,
+        );
+    }
+    match (request.method(), path.as_str()) {
         (&Method::Get, "/healthz") => {
             return reply(request, 200, r#"{"status":"ok"}"#, None);
         }
         (&Method::Get, "/.well-known/oauth-protected-resource") => {
-            return reply(request, 200, metadata, None);
+            return reply(request, 200, context.metadata, None);
         }
         (&Method::Get, "/mcp") => {
             return reply(
@@ -109,104 +126,25 @@ fn handle_request(
         _ => return reply(request, 404, r#"{"error":"Not found"}"#, None),
     }
 
-    let token = match single_header(&request, "Authorization") {
-        Ok(Some(value)) => match bearer(value) {
-            Some(token) => token,
-            None => {
-                eprintln!(
-                    "Elle diagnostic: request_id={request_id} role={} status=401 error=malformed_bearer",
-                    role.name()
-                );
-                return reply(
-                    request,
-                    401,
-                    r#"{"error":"Unauthorized"}"#,
-                    Some(challenge.clone()),
-                );
-            }
-        },
-        _ => {
-            eprintln!(
-                "Elle diagnostic: request_id={request_id} role={} status=401 error=missing_authorization",
-                role.name()
-            );
-            return reply(
-                request,
-                401,
-                r#"{"error":"Unauthorized"}"#,
-                Some(challenge.clone()),
-            );
-        }
-    };
-    let owner = match verifier.verify(token) {
+    let owner = match authenticate(&request, verifier) {
         Ok(owner) => owner,
         Err(error) => {
             eprintln!(
-                "Elle diagnostic: request_id={request_id} role={} status=401 error=token_rejected detail={}",
+                "Elle diagnostic: request_id={request_id} role={} status=401 error={error}",
                 role.name(),
-                log_value(&error.to_string())
             );
             return reply(
                 request,
                 401,
                 r#"{"error":"Unauthorized"}"#,
-                Some(challenge.clone()),
+                Some(context.challenge.clone()),
             );
         }
     };
-    if !matches!(
-        single_header(&request, "Content-Type"),
-        Ok(Some(value)) if is_json(value)
-    ) {
-        return reply(
-            request,
-            415,
-            r#"{"error":"JSON content type required"}"#,
-            None,
-        );
-    }
-    if !matches!(single_header(&request, "Accept"), Ok(None) | Ok(Some("")))
-        && !matches!(
-            single_header(&request, "Accept"),
-            Ok(Some(value)) if accepts_json(value)
-        )
-    {
-        return reply(request, 406, r#"{"error":"JSON response required"}"#, None);
-    }
-    // Explicit framing keeps the accepted body bounded and rejects chunked uploads.
-    let length = match single_header(&request, "Content-Length") {
-        Ok(Some(value)) if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) => {
-            match value.parse::<usize>() {
-                Ok(length) => length,
-                Err(_) => return reply(request, 413, r#"{"error":"Request too large"}"#, None),
-            }
-        }
-        _ => return reply(request, 411, r#"{"error":"Content-Length required"}"#, None),
+    let body = match read_json_body(&mut request) {
+        Ok(body) => body,
+        Err((status, message)) => return reply(request, status, message, None),
     };
-    if single_header(&request, "Transfer-Encoding") != Ok(None) {
-        return reply(
-            request,
-            400,
-            r#"{"error":"Unsupported request framing"}"#,
-            None,
-        );
-    }
-    if length > mcp::MAX_MESSAGE_BYTES {
-        return reply(request, 413, r#"{"error":"Request too large"}"#, None);
-    }
-    let mut body = Zeroizing::new(Vec::new());
-    if request
-        .as_reader()
-        .take(mcp::MAX_MESSAGE_BYTES as u64 + 1)
-        .read_to_end(&mut body)
-        .is_err()
-        || body.len() != length
-    {
-        return reply(request, 400, r#"{"error":"Invalid request body"}"#, None);
-    }
-    if body.len() > mcp::MAX_MESSAGE_BYTES {
-        return reply(request, 413, r#"{"error":"Request too large"}"#, None);
-    }
     let (rpc_method, tool_name) = request_summary(&body);
     match mcp::handle_for_role(&body, &owner, service, role) {
         Some(response) => {
@@ -233,6 +171,135 @@ fn handle_request(
             reply(request, 202, "", None)
         }
     }
+}
+
+fn handle_bridge(
+    mut request: Request,
+    request_id: u64,
+    path: &str,
+    challenge: &Header,
+    verifier: &mut EntraVerifier,
+    service: &mut MemoryService,
+    role: mcp::ServerRole,
+) -> Result<()> {
+    let owner = match authenticate(&request, verifier) {
+        Ok(owner) => owner,
+        Err(error) => {
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} status=401 error={error}",
+                role.name(),
+            );
+            return reply(
+                request,
+                401,
+                r#"{"error":"Unauthorized"}"#,
+                Some(challenge.clone()),
+            );
+        }
+    };
+    let body = match read_json_body(&mut request) {
+        Ok(body) => body,
+        Err((status, message)) => return reply(request, status, message, None),
+    };
+    let tool_name = path.strip_prefix("/bridge/").unwrap_or("");
+    let arguments: Value = match serde_json::from_slice(&body) {
+        Ok(Value::Object(arguments)) => Value::Object(arguments),
+        _ => {
+            return reply(
+                request,
+                400,
+                r#"{"error":"Tool arguments must be a JSON object"}"#,
+                None,
+            )
+        }
+    };
+    match mcp::invoke_for_role(tool_name, arguments, &owner, service, role) {
+        Ok(value) => {
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} bridge_tool={} status=200 result=ok",
+                role.name(),
+                log_value(tool_name)
+            );
+            reply(request, 200, &value.to_string(), None)
+        }
+        Err(error) => {
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} bridge_tool={} status=400 result=error detail={}",
+                role.name(),
+                log_value(tool_name),
+                log_value(&error.to_string())
+            );
+            reply(
+                request,
+                400,
+                &json!({"error":error.to_string()}).to_string(),
+                None,
+            )
+        }
+    }
+}
+
+fn authenticate(
+    request: &Request,
+    verifier: &mut EntraVerifier,
+) -> std::result::Result<crate::identity::OwnerId, &'static str> {
+    let value = single_header(request, "Authorization")
+        .map_err(|_| "duplicate_authorization")?
+        .ok_or("missing_authorization")?;
+    let token = bearer(value).ok_or("malformed_bearer")?;
+    verifier.verify(token).map_err(|_| "token_rejected")
+}
+
+fn read_json_body(
+    request: &mut Request,
+) -> std::result::Result<Zeroizing<Vec<u8>>, (u16, &'static str)> {
+    if !matches!(
+        single_header(request, "Content-Type"),
+        Ok(Some(value)) if is_json(value)
+    ) {
+        return Err((415, r#"{"error":"JSON content type required"}"#));
+    }
+    if !matches!(single_header(request, "Accept"), Ok(None) | Ok(Some("")))
+        && !matches!(
+            single_header(request, "Accept"),
+            Ok(Some(value)) if accepts_json(value)
+        )
+    {
+        return Err((406, r#"{"error":"JSON response required"}"#));
+    }
+    let length = match single_header(request, "Content-Length") {
+        Ok(Some(value)) if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) => {
+            match value.parse::<usize>() {
+                Ok(length) => length,
+                Err(_) => {
+                    return Err((413, r#"{"error":"Request too large"}"#));
+                }
+            }
+        }
+        _ => {
+            return Err((411, r#"{"error":"Content-Length required"}"#));
+        }
+    };
+    if single_header(request, "Transfer-Encoding") != Ok(None) {
+        return Err((400, r#"{"error":"Unsupported request framing"}"#));
+    }
+    if length > mcp::MAX_MESSAGE_BYTES {
+        return Err((413, r#"{"error":"Request too large"}"#));
+    }
+    let mut body = Zeroizing::new(Vec::new());
+    if request
+        .as_reader()
+        .take(mcp::MAX_MESSAGE_BYTES as u64 + 1)
+        .read_to_end(&mut body)
+        .is_err()
+        || body.len() != length
+    {
+        return Err((400, r#"{"error":"Invalid request body"}"#));
+    }
+    if body.len() > mcp::MAX_MESSAGE_BYTES {
+        return Err((413, r#"{"error":"Request too large"}"#));
+    }
+    Ok(body)
 }
 
 fn request_summary(body: &[u8]) -> (String, String) {

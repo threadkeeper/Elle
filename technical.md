@@ -254,7 +254,20 @@ tokens for caller identity.
     still create screened shared records. A host can still enforce approval
     independently of these annotations.
 
-53. **Keep operations bounded.** Set cost alerts, document temporary-capacity
+53. **Use delegated connector OBO when direct User-mode bindings loop.** The deployed
+    Microsoft 365 and Teams channels can repeatedly show `Connection Required`
+    even after a valid end-user OAuth connection is selected. In this failure,
+    no request reaches Elle. Import
+    `power-platform/elle-private-bridge.openapi.json` as an OAuth connector,
+    enable on-behalf-of login, and preauthorize Microsoft's Azure API
+    Connections service principal on the connector application. Attach each
+    action with End-user authentication. The connector exchanges the
+    Microsoft-authenticated caller context for an Elle delegated token; Elle
+    validates its signature, issuer, audience, scope, tenant and allowed `oid`
+    before constructing the partition. Never use Maker-mode direct MCP as a
+    substitute because its bearer token identifies the maker.
+
+54. **Keep operations bounded.** Set cost alerts, document temporary-capacity
     expiry, remove elevated setup roles when no longer needed, rotate client
     credentials, and retain only synthetic data until production controls are
     complete.
@@ -267,12 +280,16 @@ tokens for caller identity.
 4. Protected-resource metadata advertises the fully qualified delegated scope.
 5. Private and Shared Wisdom expose disjoint tool catalogs.
 6. The direct Private MCP definition can load its tool inventory.
-7. The Private tool uses User authentication mode, not Maker mode.
-8. Memory Preview, web grounding, knowledge, and connected agents are disabled
+7. Anonymous `POST /bridge/elle_context` returns `401`.
+8. The Private Bridge connector has on-behalf-of login enabled and its actions
+   use End-user authentication.
+9. A valid bridge request reaches Elle with DemoUser1 or DemoUser2's delegated
+   `oid`, never the maker's identity.
+10. The direct Private tool remains in User mode when retained for comparison.
+11. Memory Preview, web grounding, knowledge, and connected agents are disabled
    for the isolated two-MCP test.
-9. Each end-user connection shows `Connected`.
-10. The environment has effective, allocated Copilot Credits.
-11. Shared Wisdom returns reviewed guidance.
+12. The environment has effective, allocated Copilot Credits.
+13. Shared Wisdom returns reviewed guidance.
 12. Private recall returns only the caller's partition.
 13. A second user cannot retrieve the first user's private data.
 14. Logs contain protocol metadata and redacted errors only.
