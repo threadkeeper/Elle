@@ -88,40 +88,67 @@ class Foundry:
         payload = {"model": self.model, "input": prompt}
         if web:
             payload["tools"] = [{"type": "web_search"}]
-        request = urllib.request.Request(
-            self.url,
-            data=json.dumps(payload).encode(),
-            headers={
-                "Authorization": f"Bearer {self._token}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=300) as response:
-                body = json.load(response)
-        except urllib.error.HTTPError as error:
-            detail = error.read(2048).decode(errors="replace")
-            raise RuntimeError(f"Foundry returned HTTP {error.code}: {detail}") from error
-        output = body.get("output", [])
-        if web and not any(item.get("type") == "web_search_call" for item in output):
-            raise RuntimeError("Foundry did not perform the required web search")
-        texts, citations = [], []
-        for item in output:
-            if item.get("type") != "message":
+        for attempt in range(3):
+            request = urllib.request.Request(
+                self.url,
+                data=json.dumps(payload).encode(),
+                headers={
+                    "Authorization": f"Bearer {self._token}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=300) as response:
+                    body = json.load(response)
+            except urllib.error.HTTPError as error:
+                detail = error.read(2048).decode(errors="replace")
+                transient = error.code in (408, 429) or 500 <= error.code <= 599
+                if not transient or attempt == 2:
+                    raise RuntimeError(
+                        f"Foundry returned HTTP {error.code}: {detail}"
+                    ) from error
+                delay = int(error.headers.get("Retry-After", 2 ** (attempt + 1)))
+                print(
+                    f"Foundry HTTP {error.code}; retrying in {delay}s",
+                    flush=True,
+                )
+                time.sleep(min(delay, 30))
                 continue
-            for content in item.get("content", []):
-                if content.get("type") == "output_text":
-                    texts.append(content.get("text", ""))
-                    citations.extend(
-                        annotation
-                        for annotation in content.get("annotations", [])
-                        if annotation.get("type") == "url_citation"
-                    )
-        text = "\n".join(texts).strip()
-        if not text:
-            raise RuntimeError("Foundry returned no output text")
-        return text, citations
+            except urllib.error.URLError as error:
+                if attempt == 2:
+                    raise RuntimeError("Foundry request failed after 3 attempts") from error
+                delay = 2 ** (attempt + 1)
+                print(f"Foundry connection failed; retrying in {delay}s", flush=True)
+                time.sleep(delay)
+                continue
+
+            output = body.get("output", [])
+            searched = any(item.get("type") == "web_search_call" for item in output)
+            texts, citations = [], []
+            for item in output:
+                if item.get("type") != "message":
+                    continue
+                for content in item.get("content", []):
+                    if content.get("type") == "output_text":
+                        texts.append(content.get("text", ""))
+                        citations.extend(
+                            annotation
+                            for annotation in content.get("annotations", [])
+                            if annotation.get("type") == "url_citation"
+                        )
+            text = "\n".join(texts).strip()
+            if text and (not web or searched):
+                return text, citations
+            if attempt == 2:
+                if web and not searched:
+                    raise RuntimeError("Foundry did not perform the required web search")
+                raise RuntimeError("Foundry returned no output text after 3 attempts")
+            delay = 2 ** (attempt + 1)
+            reason = "no web search" if web and not searched else "no output text"
+            print(f"Foundry returned {reason}; retrying in {delay}s", flush=True)
+            time.sleep(delay)
+        raise RuntimeError("Foundry request failed")
 
 
 def research_personas(client):
@@ -373,6 +400,19 @@ def run(client, iterations, seed):
             best = {"profile": profile, "rows": rows, "report": report, "iteration": iteration}
         (RESULTS / f"responses-iteration-{iteration}.jsonl").write_text(
             "".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows),
+            encoding="utf-8",
+        )
+        (RESULTS / "checkpoint.json").write_text(
+            json.dumps(
+                {
+                    "completed_iterations": history,
+                    "current_profile": profile,
+                    "current_profile_sha256": hashlib.sha256(
+                        profile.encode()
+                    ).hexdigest(),
+                },
+                indent=2,
+            ),
             encoding="utf-8",
         )
         if alignment_gate(report):
