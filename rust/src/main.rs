@@ -8,7 +8,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use elle::auth::EntraVerifier;
-use elle::azure::{CosmosRepository, FoundryClient, ManagedIdentityCredential};
+use elle::azure::{CosmosRepository, FoundryClient, ManagedIdentityCredential, COSMOS_RESOURCE};
 use elle::encryption::FieldCipher;
 use elle::error::{Error, Result};
 use elle::file_repository::FileRepository;
@@ -52,7 +52,7 @@ fn run() -> Result<()> {
         let cosmos = required("ELLE_COSMOS_ENDPOINT")?;
         let cosmos = cosmos.trim_end_matches('/').trim_end_matches(":443");
         let credential = Arc::new(ManagedIdentityCredential::from_env(&[
-            cosmos,
+            COSMOS_RESOURCE,
             "https://cognitiveservices.azure.com/",
         ])?);
         let repository = CosmosRepository::new(

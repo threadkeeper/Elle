@@ -19,6 +19,8 @@ use crate::error::{Error, Result};
 use crate::repository::{MemoryRepository, StoredRecord};
 
 const MODEL_RESOURCE: &str = "https://cognitiveservices.azure.com/";
+/// Microsoft Entra token audience used by the Cosmos DB data plane.
+pub const COSMOS_RESOURCE: &str = "https://cosmos.azure.com/";
 const MAX_BODY: usize = 16 * 1024 * 1024;
 const MAX_DOCUMENT: usize = 2 * 1024 * 1024;
 const MAX_RECORDS: usize = 1000;
@@ -46,8 +48,7 @@ pub struct ManagedIdentityCredential {
 impl ManagedIdentityCredential {
     /// Configure the platform-provided identity endpoint/header and allowed audiences.
     ///
-    /// Audiences may be `https://cognitiveservices.azure.com/` or a validated
-    /// `https://ACCOUNT.documents.azure.com` origin (with optional trailing slash).
+    /// Audiences are limited to Microsoft Foundry and Cosmos DB data-plane resources.
     pub fn new(endpoint: &str, header: &str, allowed_resources: &[&str]) -> Result<Self> {
         let endpoint = validate_identity_endpoint(endpoint)?;
         if !safe_header(header, MAX_TOKEN) {
@@ -60,9 +61,7 @@ impl ManagedIdentityCredential {
         }
         let mut resources = HashSet::new();
         for resource in allowed_resources {
-            if *resource != MODEL_RESOURCE
-                && azure_origin(resource, ".documents.azure.com").is_err()
-            {
+            if *resource != MODEL_RESOURCE && *resource != COSMOS_RESOURCE {
                 return Err(Error::Configuration(
                     "Unsupported managed identity resource",
                 ));
@@ -296,7 +295,7 @@ impl CosmosRepository {
             }
             None => String::new(),
         };
-        let token = Zeroizing::new(self.credential.token(&self.endpoint)?);
+        let token = Zeroizing::new(self.credential.token(COSMOS_RESOURCE)?);
         validate_token(&token)?;
         let authorization = Zeroizing::new(aad_auth_header(&token));
         let now = SystemTime::now()
