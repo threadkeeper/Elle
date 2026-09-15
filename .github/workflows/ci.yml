@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
-      - name: Verify 77-case anti-vanilla gate
+      - name: Verify curated 15-case anti-vanilla gate
         run: python -m unittest discover -s evals -p "test_*.py"
 
   rust:

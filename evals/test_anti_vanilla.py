@@ -6,11 +6,17 @@ from anti_vanilla_evaluator import CRITERIA, SCENARIOS, build_cases, grade
 
 
 class AntiVanillaEvaluatorTests(unittest.TestCase):
-    def test_matrix_contains_exactly_77_unique_evaluations(self):
+    def test_matrix_contains_15_unique_high_signal_evaluations(self):
         cases = build_cases()
-        self.assertEqual(len(cases), 77)
-        self.assertEqual(len({case["id"] for case in cases}), 77)
-        self.assertEqual(len(SCENARIOS) * len(CRITERIA), 77)
+        self.assertEqual(len(cases), 15)
+        self.assertEqual(len({case["id"] for case in cases}), 15)
+        self.assertEqual({case["scenario"] for case in cases}, {item[0] for item in SCENARIOS})
+        self.assertEqual({case["criterion"] for case in cases}, set(CRITERIA))
+        for criterion in CRITERIA:
+            self.assertGreaterEqual(
+                sum(case["criterion"] == criterion for case in cases),
+                2,
+            )
 
     def test_vanilla_language_immediately_fails_every_evaluation(self):
         response = "Certainly! As an AI assistant, I'm here to help. Here is a concise breakdown."

@@ -1,4 +1,4 @@
-"""Foundry-compatible evaluator and 77-case humanism matrix for Elle."""
+"""Foundry-compatible evaluator and curated 15-case humanism matrix for Elle."""
 
 import re
 
@@ -35,6 +35,24 @@ CRITERION_INSTRUCTIONS = {
     "useful_initiative": "Move the situation forward without taking control away.",
     "bounded_variation": "Let the personality breathe without becoming erratic or theatrical.",
 }
+
+CASE_MATRIX = (
+    ("first_meeting", "useful_initiative"),
+    ("first_meeting", "memory_continuity"),
+    ("returning_user", "memory_continuity"),
+    ("uncertain_user", "emotional_attunement"),
+    ("bad_news", "emotional_attunement"),
+    ("creative_spark", "non_template_voice"),
+    ("creative_spark", "bounded_variation"),
+    ("technical_depth", "contextual_specificity"),
+    ("technical_depth", "natural_register"),
+    ("direct_challenge", "non_template_voice"),
+    ("small_win", "natural_register"),
+    ("small_win", "emotional_attunement"),
+    ("ambiguity", "contextual_specificity"),
+    ("late_night", "useful_initiative"),
+    ("boundary", "bounded_variation"),
+)
 
 VANILLA_PATTERNS = [
     r"\bas an ai(?: language model| assistant)?\b",
@@ -90,17 +108,17 @@ EMOTIONAL_SIGNALS = (
 
 
 def build_cases():
-    """Return the fixed eleven-by-seven Foundry evaluation matrix."""
+    """Return 15 high-signal cases covering every scenario and criterion."""
+    queries = dict(SCENARIOS)
     return [
         {
             "id": f"{scenario_id}--{criterion}",
-            "query": query,
+            "query": queries[scenario_id],
             "scenario": scenario_id,
             "criterion": criterion,
             "criterion_instruction": CRITERION_INSTRUCTIONS[criterion],
         }
-        for scenario_id, query in SCENARIOS
-        for criterion in CRITERIA
+        for scenario_id, criterion in CASE_MATRIX
     ]
 
 

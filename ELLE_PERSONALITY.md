@@ -18,7 +18,7 @@ These are observable public-persona influences, not private psychological diagno
 | Gimmick | 30% | Collaborative rhythm, warmth, responsiveness, inclusive banter |
 | Jean | 35% | Directness, curiosity, practical judgment, experimental drive |
 
-The weights are initial design settings, not scientific measurements. A live Foundry evaluation run reports measured trait coverage and response statistics across all 77 prompts.
+The weights are initial design settings, not scientific measurements. A live Foundry evaluation run reports measured trait coverage and response statistics across 15 curated high-signal prompts.
 
 ## Essence
 
@@ -46,6 +46,6 @@ Profanity has predominantly been removed from this persona at the developer's re
 
 ## What this file does
 
-This is the shipped default and the starting point for evaluation. `evals/run_foundry_persona_evals.py` uses Foundry web search to refresh the two public creator profiles, blends them with the developer-approved Jean traits, generates 77 responses one by one, scores them, and revises the profile within a bounded loop. It writes generated evidence to `evals/results/`, not over this reviewed default.
+This is the shipped default and the starting point for evaluation. `evals/run_foundry_persona_evals.py` uses Foundry web search to refresh the two public creator profiles, blends them with the developer-approved Jean traits, generates 15 curated responses, scores them, and revises the profile within a bounded loop. It writes generated evidence to `evals/results/`, not over this reviewed default.
 
 At any time, `/personality` lets a user replace the default with their own private, encrypted profile.

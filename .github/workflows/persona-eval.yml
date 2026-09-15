@@ -31,7 +31,7 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Research, build and run 77 evaluations
+      - name: Research, build and run 15 evaluations
         env:
           ELLE_FOUNDRY_ENDPOINT: https://foundryjva001.openai.azure.com
           ELLE_EVAL_MODEL: o4-mini

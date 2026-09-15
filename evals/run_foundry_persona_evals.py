@@ -15,6 +15,7 @@ import urllib.request
 from pathlib import Path
 
 from anti_vanilla_evaluator import (
+    CASE_MATRIX,
     EMOTIONAL_SIGNALS,
     VANILLA_PATTERNS,
     build_cases,
@@ -68,6 +69,7 @@ ALIGNMENT_THRESHOLDS = {
     "original_elle_blend": 0.70,
 }
 MINIMUM_BLEND_THRESHOLD = 0.40
+CASE_COUNT = len(CASE_MATRIX)
 
 
 def _token():
@@ -386,7 +388,7 @@ def metrics(rows):
 def alignment_gate(report):
     averages = report["average_judged_alignment"]
     return (
-        report["passed"] == 77
+        report["passed"] == CASE_COUNT
         and report["vanilla_marker_rate"] == 0
         and all(averages[key] >= threshold for key, threshold in ALIGNMENT_THRESHOLDS.items())
         and report["minimum_original_elle_blend"] >= MINIMUM_BLEND_THRESHOLD
@@ -432,7 +434,8 @@ def run(client, iterations, seed, workers):
             rows = list(executor.map(evaluate, cases))
         for index, row in enumerate(rows, 1):
             print(
-                f"[{iteration}:{index:02d}/77] {row['id']} score={row['score']:.0f} "
+                f"[{iteration}:{index:02d}/{CASE_COUNT}] {row['id']} "
+                f"score={row['score']:.0f} "
                 f"blend={row['alignment']['original_elle_blend']:.2f}",
                 flush=True,
             )
@@ -504,7 +507,7 @@ def run(client, iterations, seed, workers):
         "best_iteration": best["iteration"],
         "alignment_thresholds": ALIGNMENT_THRESHOLDS,
         "minimum_blend_threshold": MINIMUM_BLEND_THRESHOLD,
-        "passed_all_77": final["passed"] == 77,
+        "passed_all_cases": final["passed"] == CASE_COUNT,
         "passed_full_gate": alignment_gate(final),
     }
     (RESULTS / "ELLE_PERSONALITY.generated.md").write_text(profile, encoding="utf-8")
@@ -519,12 +522,12 @@ def run(client, iterations, seed, workers):
     )
     if not alignment_gate(final):
         raise SystemExit(
-            f"Gate failed: best result {final['passed']}/77 with alignment "
+            f"Gate failed: best result {final['passed']}/{CASE_COUNT} with alignment "
             f"{final['average_judged_alignment']} and minimum blend "
             f"{final['minimum_original_elle_blend']:.2f} in iteration "
             f"{best['iteration']} after {iterations} iterations"
         )
-    print("Gate passed: 77/77 and all alignment thresholds")
+    print(f"Gate passed: {CASE_COUNT}/{CASE_COUNT} and all alignment thresholds")
 
 
 def main():

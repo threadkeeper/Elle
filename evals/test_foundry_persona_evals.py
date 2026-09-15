@@ -74,9 +74,9 @@ class FoundryPersonaEvalTests(unittest.TestCase):
         self.assertEqual(result, valid)
         self.assertEqual(client.calls, 2)
 
-    def test_full_gate_requires_all_77_and_trait_alignment(self):
+    def test_full_gate_requires_all_cases_and_trait_alignment(self):
         report = {
-            "passed": 77,
+            "passed": 15,
             "vanilla_marker_rate": 0.0,
             "average_judged_alignment": {
                 key: threshold for key, threshold in ALIGNMENT_THRESHOLDS.items()
