@@ -68,9 +68,9 @@ Show encrypted export and restore. Explain that the backup contains Elle memorie
 
 The seed is idempotent. Run `elle seed-demo` once for the private role and once for the Wisdom role with `ELLE_DEMO_SEED=1` and the two demo object IDs in `ELLE_DEMO_USER_IDS`. Re-running it does not duplicate memories or the shared lesson.
 
-## Live MCP endpoints
+## MCP endpoint placeholders
 
-- Private Elle: `https://elle-private-vnet.yellowsky-9d92d540.swedencentral.azurecontainerapps.io/mcp`
-- Shared Wisdom: `https://elle-wisdom-vnet.yellowsky-9d92d540.swedencentral.azurecontainerapps.io/mcp`
+- Private Elle: `https://<private-app-host>/mcp`
+- Shared Wisdom: `https://<wisdom-app-host>/mcp`
 
 Both endpoints have public HTTPS ingress for Copilot Studio. Their Cosmos DB traffic stays on Private Link inside the VNet.

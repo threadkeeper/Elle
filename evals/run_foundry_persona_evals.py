@@ -534,7 +534,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--endpoint",
-        default=os.getenv("ELLE_FOUNDRY_ENDPOINT", "https://foundryjva001.openai.azure.com"),
+        default=os.getenv("ELLE_FOUNDRY_ENDPOINT"),
     )
     parser.add_argument("--model", default=os.getenv("ELLE_EVAL_MODEL", "o4-mini"))
     parser.add_argument("--iterations", type=int, default=3, choices=range(1, 6))
@@ -546,6 +546,8 @@ def main():
     )
     parser.add_argument("--seed", default="elle-default-v1")
     args = parser.parse_args()
+    if not args.endpoint:
+        parser.error("--endpoint or ELLE_FOUNDRY_ENDPOINT is required")
     run(Foundry(args.endpoint, args.model), args.iterations, args.seed, args.workers)
 
 

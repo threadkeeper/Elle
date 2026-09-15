@@ -126,8 +126,8 @@ Our first path remains two reusable, independently removable MCP servers for Sco
 
 Active internal hackathon prototype. Local memory, encryption, backup/restore and MCP tests are working. Separate private and Shared Wisdom MCP services are deployed to a VNet-integrated Azure Container Apps environment through a GitHub OIDC pipeline. Cosmos DB remains private: the apps resolve its standard hostname through `privatelink.documents.azure.com`, and key authentication is disabled.
 
-- Private Elle MCP: `https://elle-private-vnet.yellowsky-9d92d540.swedencentral.azurecontainerapps.io/mcp`
-- Shared Wisdom MCP: `https://elle-wisdom-vnet.yellowsky-9d92d540.swedencentral.azurecontainerapps.io/mcp`
+- Private Elle MCP: `https://<private-app-host>/mcp`
+- Shared Wisdom MCP: `https://<wisdom-app-host>/mcp`
 
 The demo contains three months of synthetic history for two dedicated demo identities and one explicitly contributed shared lesson. Delegated Microsoft 365 client consent and Copilot Studio host integration remain in progress.
 
