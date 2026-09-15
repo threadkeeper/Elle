@@ -22,7 +22,7 @@ const CLOCK_LEEWAY: u64 = 30;
 pub struct EntraVerifier {
     tenant_id: String,
     audience: String,
-    allowed_object_id: String,
+    allowed_object_id: Option<String>,
     authority: String,
     keys: Vec<VerificationKey>,
     fetched_at: Option<Instant>,
@@ -86,7 +86,29 @@ impl EntraVerifier {
         Ok(Self {
             tenant_id: tenant_id.to_owned(),
             audience: audience.to_owned(),
-            allowed_object_id: allowed_object_id.to_owned(),
+            allowed_object_id: Some(allowed_object_id.to_owned()),
+            authority: format!("https://login.microsoftonline.com/{tenant_id}/v2.0"),
+            keys: Vec::new(),
+            fetched_at: None,
+            last_attempt: None,
+            agent: ureq::AgentBuilder::new()
+                .timeout(Duration::from_secs(10))
+                .redirects(0)
+                .build(),
+        })
+    }
+
+    /// Verify any delegated user in one configured tenant and application.
+    pub fn for_tenant_users(tenant_id: &str, audience: &str) -> Result<Self> {
+        if ![tenant_id, audience].iter().all(|value| valid_uuid(value)) {
+            return Err(Error::Configuration(
+                "Entra tenant and audience must be nonzero UUIDs",
+            ));
+        }
+        Ok(Self {
+            tenant_id: tenant_id.to_owned(),
+            audience: audience.to_owned(),
+            allowed_object_id: None,
             authority: format!("https://login.microsoftonline.com/{tenant_id}/v2.0"),
             keys: Vec::new(),
             fetched_at: None,
@@ -165,7 +187,10 @@ impl EntraVerifier {
 
     fn validate_claims(&self, claims: &Claims, now: u64) -> Result<OwnerId> {
         if claims.tid != self.tenant_id
-            || claims.oid != self.allowed_object_id
+            || self
+                .allowed_object_id
+                .as_ref()
+                .is_some_and(|allowed| claims.oid != *allowed)
             || claims.aud != self.audience
             || claims.iss != self.authority
             || !claims
@@ -349,11 +374,32 @@ mod tests {
             let claims = serde_json::from_value(invalid).unwrap();
             assert!(verifier.validate_claims(&claims, 1000).is_err(), "{field}");
         }
+
         for field in ["tid", "oid", "aud", "iss", "exp", "nbf", "scp"] {
             let mut invalid = valid.clone();
             invalid.as_object_mut().unwrap().remove(field);
             assert!(serde_json::from_value::<Claims>(invalid).is_err());
         }
+    }
+
+    #[test]
+    fn tenant_user_mode_accepts_distinct_delegated_users_in_the_same_tenant() {
+        let verifier = EntraVerifier::for_tenant_users(TENANT, APP).unwrap();
+        for owner in [OWNER, "dddddddd-dddd-dddd-dddd-dddddddddddd"] {
+            let claims: Claims = serde_json::from_value(json!({
+                "tid":TENANT,"oid":owner,"aud":APP,"iss":verifier.authority(),
+                "exp":1100,"nbf":900,"scp":"access_as_user"
+            }))
+            .unwrap();
+            let identity = verifier.validate_claims(&claims, 1000).unwrap();
+            assert!(identity.as_str().ends_with(owner));
+        }
+        let wrong_tenant: Claims = serde_json::from_value(json!({
+            "tid":APP,"oid":OWNER,"aud":APP,"iss":verifier.authority(),
+            "exp":1100,"nbf":900,"scp":"access_as_user"
+        }))
+        .unwrap();
+        assert!(verifier.validate_claims(&wrong_tenant, 1000).is_err());
     }
 
     #[test]

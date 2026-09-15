@@ -45,7 +45,6 @@ fn run() -> Result<()> {
         let role = mcp::ServerRole::parse(&required("ELLE_MCP_ROLE")?)?;
         let tenant = required("ELLE_TENANT_ID")?;
         let audience = required("ELLE_API_AUDIENCE")?;
-        let allowed_user = required("ELLE_ALLOWED_USER_ID")?;
         let origin = required("ELLE_PUBLIC_ORIGIN")?;
         let key = Zeroizing::new(required("ELLE_FIELD_ENCRYPTION_KEY")?);
         let cosmos = required("ELLE_COSMOS_ENDPOINT")?;
@@ -87,13 +86,13 @@ fn run() -> Result<()> {
             FieldCipher::from_base64(&key)?,
             embedder,
         );
-        return elle::server::serve(
-            "0.0.0.0:8080",
-            &origin,
-            EntraVerifier::new(&tenant, &audience, &allowed_user)?,
-            service,
-            role,
-        );
+        let verifier = match role {
+            mcp::ServerRole::Private => {
+                EntraVerifier::new(&tenant, &audience, &required("ELLE_ALLOWED_USER_ID")?)?
+            }
+            mcp::ServerRole::SharedWisdom => EntraVerifier::for_tenant_users(&tenant, &audience)?,
+        };
+        return elle::server::serve("0.0.0.0:8080", &origin, verifier, service, role);
     }
     if env::var("ELLE_LOCAL_DEV").as_deref() != Ok("1") {
         return Err(Error::Configuration(

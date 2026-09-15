@@ -84,7 +84,7 @@ The current source implements the core cryptography, user partitioning, Entra to
 - **Encryption in transit:** HTTPS/TLS will protect connections between the client and Elle.
 - **Encrypted memory text:** we plan to adapt the source project's AES-256-GCM field encryption, with separate per-user keys derived using HKDF-SHA256. This protects selected text fields and detects tampering. Elle will require encryption configuration rather than silently saving those fields as plaintext.
 - **Protected downloads:** the source archive design uses AES-256-GCM with a password-derived key, PBKDF2-HMAC-SHA256 with 600,000 iterations, and a random salt. We plan to retain this protection for Elle backups. A strong password is still essential.
-- **Account isolation:** Microsoft Entra sign-in will establish who is calling. The service, not a chat message, will determine which user's memories can be read, changed, exported or restored.
+- **Account isolation:** Microsoft Entra sign-in establishes who is calling. Private Elle is pinned to the configured demo owner; Shared Wisdom accepts delegated users from the configured tenant. Every caller still receives a distinct tenant-and-object-ID partition.
 - **User control:** saving, changing, deleting and restoring information will require explicit user direction. One user's private memories will not be shared with other users.
 - **Restricted service access:** Azure managed identities and narrowly scoped permissions will control access to storage and models. Encryption keys will be held outside the source repository, using Azure Key Vault.
 - **Limited data exposure:** only relevant context will be sent to the configured AI services. Operational logs will be designed to exclude memory text, passwords and credentials.
