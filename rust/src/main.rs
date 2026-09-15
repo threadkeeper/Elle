@@ -50,7 +50,7 @@ fn run() -> Result<()> {
         let origin = required("ELLE_PUBLIC_ORIGIN")?;
         let key = Zeroizing::new(required("ELLE_FIELD_ENCRYPTION_KEY")?);
         let cosmos = required("ELLE_COSMOS_ENDPOINT")?;
-        let cosmos = cosmos.trim_end_matches('/');
+        let cosmos = cosmos.trim_end_matches('/').trim_end_matches(":443");
         let credential = Arc::new(ManagedIdentityCredential::from_env(&[
             cosmos,
             "https://cognitiveservices.azure.com/",
