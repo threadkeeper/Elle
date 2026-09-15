@@ -65,7 +65,7 @@ Bounded variation keeps Elle from sounding mechanically fixed: warmth, playfulne
 
 The shared server is positioned like an optional "help improve the product" choice, but it is more explicit than a diagnostics switch: future contributions may contain generalized lesson content. Installing this server does not opt you in, and it cannot query your private Elle memory store.
 
-The first demo exposes a small reviewed, non-private shared catalog and an independent opt-in setting. It does **not** yet collect conversations or publish private-derived lessons. Before contribution is enabled, the project must disclose exactly what is collected, apply automated privacy screening, and provide controls to inspect and delete retained contributions.
+The first demo exposes a small reviewed, non-private shared catalog and an independent opt-in setting. An authenticated user can explicitly contribute one standalone generalized lesson after confirmation. Conservative screening rejects identifiers, links, digits and instruction-like text; the shared record stores no contributor identity and never reads private memories automatically.
 
 Removing either MCP connection stops that server's future access. It does not automatically delete data already stored by that server; deletion is a separate, explicit control.
 

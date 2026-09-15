@@ -14,7 +14,9 @@ use elle::error::{Error, Result};
 use elle::file_repository::FileRepository;
 use elle::identity::OwnerId;
 use elle::mcp::{self, MAX_MESSAGE_BYTES};
+use elle::memory::{MemoryPayload, RememberRequest};
 use elle::service::MemoryService;
+use serde::Deserialize;
 use zeroize::Zeroizing;
 
 fn main() -> ExitCode {
@@ -31,7 +33,7 @@ fn run() -> Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.is_empty() || args == ["--help"] {
         println!(
-            "Elle MCP server\nCommands: serve | stdio | export <file> | restore <file>\n\
+            "Elle MCP server\nCommands: serve | stdio | export <file> | restore <file> | seed-demo\n\
             Requires ELLE_MCP_ROLE=private|wisdom. Local commands also require\n\
             ELLE_LOCAL_DEV=1, ELLE_TENANT_ID, ELLE_USER_ID, ELLE_DATA_DIR,\n\
             ELLE_FIELD_ENCRYPTION_KEY (base64 32 bytes). Export/restore also require\n\
@@ -41,7 +43,7 @@ fn run() -> Result<()> {
         );
         return Ok(());
     }
-    if args == ["serve"] {
+    if args == ["serve"] || args == ["seed-demo"] {
         let role = mcp::ServerRole::parse(&required("ELLE_MCP_ROLE")?)?;
         let tenant = required("ELLE_TENANT_ID")?;
         let audience = required("ELLE_API_AUDIENCE")?;
@@ -84,18 +86,123 @@ fn run() -> Result<()> {
                     ))
                 }
             };
-        let service = MemoryService::new(
+        let mut service = MemoryService::new(
             Box::new(repository),
             FieldCipher::from_base64(&key)?,
             embedder,
         );
+        if args == ["seed-demo"] {
+            if env::var("ELLE_DEMO_SEED").as_deref() != Ok("1") {
+                return Err(Error::Configuration("Demo seed requires ELLE_DEMO_SEED=1"));
+            }
+            seed_demo(
+                &mut service,
+                role,
+                &tenant,
+                &required("ELLE_DEMO_USER_IDS")?,
+            )?;
+            println!("Synthetic demo data seeded.");
+            return Ok(());
+        }
         let verifier = match role {
             mcp::ServerRole::Private => {
-                EntraVerifier::new(&tenant, &audience, &required("ELLE_ALLOWED_USER_ID")?)?
+                EntraVerifier::for_users(&tenant, &audience, &allowed_users()?)?
             }
             mcp::ServerRole::SharedWisdom => EntraVerifier::for_tenant_users(&tenant, &audience)?,
         };
         return elle::server::serve("0.0.0.0:8080", &origin, verifier, service, role);
+    }
+
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct DemoSeed {
+        schema_version: u32,
+        users: Vec<DemoUser>,
+        wisdom: DemoWisdom,
+    }
+
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct DemoUser {
+        key: String,
+        memories: Vec<MemoryPayload>,
+    }
+
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct DemoWisdom {
+        contributor: String,
+        text: String,
+    }
+
+    fn allowed_users() -> Result<Vec<String>> {
+        let raw = env::var("ELLE_ALLOWED_USER_IDS")
+            .or_else(|_| env::var("ELLE_ALLOWED_USER_ID"))
+            .map_err(|_| Error::Configuration("ELLE_ALLOWED_USER_IDS"))?;
+        let users = raw
+            .split(',')
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+            .collect::<Vec<_>>();
+        if users.is_empty() {
+            return Err(Error::Configuration("ELLE_ALLOWED_USER_IDS"));
+        }
+        Ok(users)
+    }
+
+    fn seed_demo(
+        service: &mut MemoryService,
+        role: mcp::ServerRole,
+        tenant: &str,
+        user_ids: &str,
+    ) -> Result<()> {
+        let seed: DemoSeed =
+            serde_json::from_str(include_str!("../../app/demo/synthetic-history.json"))
+                .map_err(|_| Error::Integrity("Invalid synthetic demo seed"))?;
+        if seed.schema_version != 1 {
+            return Err(Error::Integrity("Unsupported synthetic demo seed"));
+        }
+        let ids = user_ids.split(',').map(str::trim).collect::<Vec<_>>();
+        if ids.len() != seed.users.len() {
+            return Err(Error::Configuration(
+                "ELLE_DEMO_USER_IDS must match the synthetic demo users",
+            ));
+        }
+        let owners = ids
+            .iter()
+            .map(|id| OwnerId::new(tenant, id))
+            .collect::<Result<Vec<_>>>()?;
+        match role {
+            mcp::ServerRole::Private => {
+                for (user, owner) in seed.users.iter().zip(&owners) {
+                    for (index, payload) in user.memories.iter().enumerate() {
+                        service.remember(
+                            owner,
+                            RememberRequest {
+                                payload: payload.clone(),
+                                idempotency_key: format!("synthetic-history-{}-{index}", user.key),
+                                expires_at: None,
+                            },
+                        )?;
+                    }
+                }
+            }
+            mcp::ServerRole::SharedWisdom => {
+                let index = seed
+                    .users
+                    .iter()
+                    .position(|user| user.key == seed.wisdom.contributor)
+                    .ok_or(Error::Integrity("Invalid synthetic Wisdom contributor"))?;
+                let owner = &owners[index];
+                let consent = service.wisdom_consent(owner)?;
+                if !consent.consent.enabled {
+                    service.set_wisdom_consent(owner, true, consent.version)?;
+                }
+                service.contribute_wisdom(owner, &seed.wisdom.text)?;
+            }
+        }
+        Ok(())
     }
     if env::var("ELLE_LOCAL_DEV").as_deref() != Ok("1") {
         return Err(Error::Configuration(

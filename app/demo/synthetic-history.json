@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "users": [
+    {
+      "key": "demo-user-one",
+      "memories": [
+        {
+          "content": "June: prefers turning architecture debates into one small reversible prototype before discussing a larger programme.",
+          "category": "preference",
+          "source": "Synthetic demo history for June"
+        },
+        {
+          "content": "June: a dashboard review exposed that a green status card was based on stale data, so freshness became part of every readiness check.",
+          "category": "project",
+          "source": "Synthetic demo history for June"
+        },
+        {
+          "content": "July: found that technical workshops work best when the group starts with one real failure path rather than a feature tour.",
+          "category": "preference",
+          "source": "Synthetic demo history for July"
+        },
+        {
+          "content": "July: is shaping a fictional retail data platform demo around portable data, typed restoration and visible reconciliation.",
+          "category": "project",
+          "source": "Synthetic demo history for July"
+        },
+        {
+          "content": "August: prefers executive updates that state the tension first, show evidence second and finish with a measurable decision.",
+          "category": "preference",
+          "source": "Synthetic demo history for August"
+        },
+        {
+          "content": "August: the next demo rehearsal should prove continuity across chats without using any real customer or colleague information.",
+          "category": "project",
+          "source": "Synthetic demo history for August"
+        }
+      ]
+    },
+    {
+      "key": "demo-user-two",
+      "memories": [
+        {
+          "content": "June: prefers concise explanations that end with the exact command or check needed to verify the claim.",
+          "category": "preference",
+          "source": "Synthetic demo history for June"
+        },
+        {
+          "content": "June: noticed that busy status meetings improve when each claim includes its source and the time it was last refreshed.",
+          "category": "project",
+          "source": "Synthetic demo history for June"
+        },
+        {
+          "content": "July: likes demos with a visible before-and-after moment rather than a long sequence of setup screens.",
+          "category": "preference",
+          "source": "Synthetic demo history for July"
+        },
+        {
+          "content": "July: is preparing a fictional operations review where an apparently healthy dashboard conceals an old data snapshot.",
+          "category": "project",
+          "source": "Synthetic demo history for July"
+        },
+        {
+          "content": "August: prefers risks to be named plainly and paired with one practical mitigation instead of a dense risk register.",
+          "category": "preference",
+          "source": "Synthetic demo history for August"
+        },
+        {
+          "content": "August: wants the shared learning demo to show useful human experience surviving beyond one model response and one user session.",
+          "category": "project",
+          "source": "Synthetic demo history for August"
+        }
+      ]
+    }
+  ],
+  "wisdom": {
+    "contributor": "demo-user-one",
+    "text": "A green status without a fresh timestamp is decoration, not evidence."
+  }
+}

@@ -31,6 +31,8 @@ pub enum WisdomProvenance {
     Operator,
     /// Original synthetic guidance generated without personal memory.
     Synthetic,
+    /// Sanitized guidance deliberately contributed by an authenticated person.
+    Human,
 }
 
 /// One reviewed principle; contains neither an owner nor source records.
@@ -95,6 +97,7 @@ impl WisdomCatalog {
                 || !ids.insert(entry.id.clone())
                 || entry.version == 0
                 || !entry.reviewed
+                || entry.provenance == WisdomProvenance::Human
             {
                 return Err(Error::InvalidInput("Invalid or unreviewed wisdom entry"));
             }
@@ -111,31 +114,45 @@ impl WisdomCatalog {
     /// Limits must be 1..=20; blank, punctuation-only, or oversized queries fail.
     /// No query or result is persisted, embedded, or supplied to a model.
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<WisdomEntry>> {
-        if !(1..=20).contains(&limit) || query.len() > 512 {
-            return Err(Error::InvalidInput("Invalid wisdom query or limit"));
-        }
-        let words = tokens(query);
-        if words.is_empty() {
-            return Err(Error::InvalidInput("Wisdom query must contain words"));
-        }
-        let mut matches: Vec<_> = self
-            .entries
-            .iter()
-            .filter_map(|entry| {
-                let entry_words = tokens(&entry.text);
-                let score = words.intersection(&entry_words).count();
-                (score > 0).then_some((score, entry))
-            })
-            .collect();
-        matches.sort_by(|(a_score, a), (b_score, b)| {
-            b_score.cmp(a_score).then_with(|| a.id.cmp(&b.id))
-        });
-        Ok(matches
-            .into_iter()
-            .take(limit)
-            .map(|(_, entry)| entry.clone())
-            .collect())
+        search_entries(&self.entries, query, limit)
     }
+
+    /// Search the reviewed catalog together with validated durable contributions.
+    pub fn search_with(
+        &self,
+        additional: &[WisdomEntry],
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<WisdomEntry>> {
+        let mut entries = self.entries.clone();
+        entries.extend_from_slice(additional);
+        search_entries(&entries, query, limit)
+    }
+}
+
+fn search_entries(entries: &[WisdomEntry], query: &str, limit: usize) -> Result<Vec<WisdomEntry>> {
+    if !(1..=20).contains(&limit) || query.len() > 512 {
+        return Err(Error::InvalidInput("Invalid wisdom query or limit"));
+    }
+    let words = tokens(query);
+    if words.is_empty() {
+        return Err(Error::InvalidInput("Wisdom query must contain words"));
+    }
+    let mut matches: Vec<_> = entries
+        .iter()
+        .filter_map(|entry| {
+            let entry_words = tokens(&entry.text);
+            let score = words.intersection(&entry_words).count();
+            (score > 0).then_some((score, entry))
+        })
+        .collect();
+    matches
+        .sort_by(|(a_score, a), (b_score, b)| b_score.cmp(a_score).then_with(|| a.id.cmp(&b.id)));
+    Ok(matches
+        .into_iter()
+        .take(limit)
+        .map(|(_, entry)| entry.clone())
+        .collect())
 }
 
 fn tokens(text: &str) -> BTreeSet<String> {
@@ -250,7 +267,7 @@ const FORBIDDEN_TERMS: &[&str] = &[
     "your task",
 ];
 
-fn screen_text(text: &str, max_len: usize) -> Result<()> {
+pub(crate) fn screen_text(text: &str, max_len: usize) -> Result<()> {
     if !(40..=max_len).contains(&text.len())
         || !text.is_ascii()
         || text.trim() != text
@@ -345,6 +362,9 @@ mod tests {
             value["entries"][0]["provenance"] = json!(provenance);
             assert!(WisdomCatalog::from_json(&value.to_string()).is_ok());
         }
+        let mut human = document();
+        human["entries"][0]["provenance"] = json!("human");
+        assert!(WisdomCatalog::from_json(&human.to_string()).is_err());
     }
 
     #[test]

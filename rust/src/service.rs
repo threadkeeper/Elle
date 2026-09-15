@@ -15,10 +15,11 @@ use crate::identity::OwnerId;
 use crate::memory::{Memory, MemoryPayload, RecallResult, RememberRequest};
 use crate::personality::Personality;
 use crate::repository::{MemoryRepository, RecordKind, StoredRecord};
-use crate::wisdom::{WisdomCatalog, WisdomConsent};
+use crate::wisdom::{screen_text, WisdomCatalog, WisdomConsent, WisdomEntry, WisdomProvenance};
 
 const PROFILE_ID: &str = "personality";
 const CONSENT_ID: &str = "wisdom-consent";
+const SHARED_WISDOM_OWNER: &str = "shared-wisdom";
 
 /// Versioned private-reflection preference; sharing private data is never implied.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -425,12 +426,59 @@ impl MemoryService {
 
     /// Search the shared non-private catalog, never another user's private memory.
     pub fn shared_wisdom(&self, query: &str, limit: usize) -> Result<Value> {
+        let contributions = self.shared_wisdom_entries()?;
         Ok(serde_json::json!({
-            "source": "reviewed_shared_nonprivate_catalog",
+            "source": "reviewed_catalog_and_explicit_human_contributions",
             "mode": "keyword",
-            "entries": WisdomCatalog::bundled()?.search(query, limit)?,
-            "privateDerivedPublicationEnabled": false
+            "entries": WisdomCatalog::bundled()?.search_with(&contributions, query, limit)?,
+            "privateDerivedPublicationEnabled": false,
+            "durableHumanContributions": contributions.len()
         }))
+    }
+
+    /// Store one explicitly approved, privacy-screened lesson without contributor identity.
+    pub fn contribute_wisdom(&mut self, owner: &OwnerId, text: &str) -> Result<WisdomEntry> {
+        if !self.wisdom_consent(owner)?.consent.enabled {
+            return Err(Error::InvalidInput(
+                "Explicit Wisdom contribution consent is required",
+            ));
+        }
+        screen_text(text, 360)?;
+        let id = format!("human-{:x}", Sha256::digest(text.as_bytes()));
+        if let Some(existing) = self.repository.get(SHARED_WISDOM_OWNER, &id)? {
+            return self.decode_wisdom_entry(&existing);
+        }
+        let entry = WisdomEntry {
+            id: id.clone(),
+            text: text.to_owned(),
+            provenance: WisdomProvenance::Human,
+            version: 1,
+            reviewed: true,
+        };
+        let payload = serde_json::to_vec(&entry)
+            .map_err(|_| Error::InvalidInput("Cannot serialize Wisdom contribution"))?;
+        let timestamp = now()?;
+        let record = StoredRecord {
+            id,
+            owner_id: SHARED_WISDOM_OWNER.to_owned(),
+            kind: RecordKind::SharedWisdom,
+            ciphertext: self
+                .cipher
+                .encrypt(SHARED_WISDOM_OWNER, &entry.id, &payload)?,
+            version: 1,
+            created_at: timestamp,
+            updated_at: timestamp,
+            expires_at: None,
+            embedding: None,
+        };
+        if !self.repository.create(&record)? {
+            let existing = self
+                .repository
+                .get(SHARED_WISDOM_OWNER, &entry.id)?
+                .ok_or(Error::Conflict)?;
+            return self.decode_wisdom_entry(&existing);
+        }
+        Ok(entry)
     }
 
     /// Read durable reflection consent; absence is an explicit disabled default.
@@ -498,6 +546,35 @@ impl MemoryService {
             .filter(|record| record.kind == RecordKind::Memory)
             .map(|record| self.decode_memory(owner, record))
             .collect()
+    }
+
+    fn shared_wisdom_entries(&self) -> Result<Vec<WisdomEntry>> {
+        self.repository
+            .list(SHARED_WISDOM_OWNER)?
+            .iter()
+            .filter(|record| record.kind == RecordKind::SharedWisdom)
+            .map(|record| self.decode_wisdom_entry(record))
+            .collect()
+    }
+
+    fn decode_wisdom_entry(&self, record: &StoredRecord) -> Result<WisdomEntry> {
+        if record.owner_id != SHARED_WISDOM_OWNER || record.kind != RecordKind::SharedWisdom {
+            return Err(Error::Integrity("Invalid shared Wisdom record"));
+        }
+        let plaintext = self
+            .cipher
+            .decrypt(SHARED_WISDOM_OWNER, &record.id, &record.ciphertext)?;
+        let entry: WisdomEntry = serde_json::from_slice(&plaintext)
+            .map_err(|_| Error::Integrity("Invalid shared Wisdom payload"))?;
+        screen_text(&entry.text, 360)?;
+        if entry.id != record.id
+            || entry.provenance != WisdomProvenance::Human
+            || entry.version == 0
+            || !entry.reviewed
+        {
+            return Err(Error::Integrity("Invalid shared Wisdom payload"));
+        }
+        Ok(entry)
     }
 
     fn decode_memory(&self, owner: &OwnerId, record: &StoredRecord) -> Result<Memory> {

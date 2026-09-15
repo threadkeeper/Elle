@@ -4,6 +4,7 @@ COPY .cargo/ .cargo/
 COPY rust/Cargo.toml rust/Cargo.lock rust/
 COPY rust/src/ rust/src/
 COPY app/wisdom/catalog.json app/wisdom/catalog.json
+COPY app/demo/synthetic-history.json app/demo/synthetic-history.json
 WORKDIR /src/rust
 RUN cargo build --release --locked
 

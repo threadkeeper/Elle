@@ -1,5 +1,6 @@
 //! Tenant-pinned Entra delegated access-token verification for the HTTP host.
 
+use std::collections::BTreeSet;
 use std::io::Read;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -22,7 +23,7 @@ const CLOCK_LEEWAY: u64 = 30;
 pub struct EntraVerifier {
     tenant_id: String,
     audience: String,
-    allowed_object_id: Option<String>,
+    allowed_object_ids: Option<BTreeSet<String>>,
     authority: String,
     keys: Vec<VerificationKey>,
     fetched_at: Option<Instant>,
@@ -86,7 +87,7 @@ impl EntraVerifier {
         Ok(Self {
             tenant_id: tenant_id.to_owned(),
             audience: audience.to_owned(),
-            allowed_object_id: Some(allowed_object_id.to_owned()),
+            allowed_object_ids: Some(BTreeSet::from([allowed_object_id.to_owned()])),
             authority: format!("https://login.microsoftonline.com/{tenant_id}/v2.0"),
             keys: Vec::new(),
             fetched_at: None,
@@ -98,6 +99,23 @@ impl EntraVerifier {
         })
     }
 
+    /// Verify delegated users from an explicit allow-list in one tenant.
+    pub fn for_users(tenant_id: &str, audience: &str, object_ids: &[String]) -> Result<Self> {
+        if object_ids.is_empty()
+            || ![tenant_id, audience].iter().all(|value| valid_uuid(value))
+            || object_ids.iter().any(|value| !valid_uuid(value))
+        {
+            return Err(Error::Configuration(
+                "Entra tenant, audience and allowed object IDs must be nonzero UUIDs",
+            ));
+        }
+        Self::configured(
+            tenant_id,
+            audience,
+            Some(object_ids.iter().cloned().collect()),
+        )
+    }
+
     /// Verify any delegated user in one configured tenant and application.
     pub fn for_tenant_users(tenant_id: &str, audience: &str) -> Result<Self> {
         if ![tenant_id, audience].iter().all(|value| valid_uuid(value)) {
@@ -105,10 +123,18 @@ impl EntraVerifier {
                 "Entra tenant and audience must be nonzero UUIDs",
             ));
         }
+        Self::configured(tenant_id, audience, None)
+    }
+
+    fn configured(
+        tenant_id: &str,
+        audience: &str,
+        allowed_object_ids: Option<BTreeSet<String>>,
+    ) -> Result<Self> {
         Ok(Self {
             tenant_id: tenant_id.to_owned(),
             audience: audience.to_owned(),
-            allowed_object_id: None,
+            allowed_object_ids,
             authority: format!("https://login.microsoftonline.com/{tenant_id}/v2.0"),
             keys: Vec::new(),
             fetched_at: None,
@@ -188,9 +214,9 @@ impl EntraVerifier {
     fn validate_claims(&self, claims: &Claims, now: u64) -> Result<OwnerId> {
         if claims.tid != self.tenant_id
             || self
-                .allowed_object_id
+                .allowed_object_ids
                 .as_ref()
-                .is_some_and(|allowed| claims.oid != *allowed)
+                .is_some_and(|allowed| !allowed.contains(&claims.oid))
             || claims.aud != self.audience
             || claims.iss != self.authority
             || !claims
@@ -394,12 +420,34 @@ mod tests {
             let identity = verifier.validate_claims(&claims, 1000).unwrap();
             assert!(identity.as_str().ends_with(owner));
         }
+
         let wrong_tenant: Claims = serde_json::from_value(json!({
             "tid":APP,"oid":OWNER,"aud":APP,"iss":verifier.authority(),
             "exp":1100,"nbf":900,"scp":"access_as_user"
         }))
         .unwrap();
         assert!(verifier.validate_claims(&wrong_tenant, 1000).is_err());
+    }
+
+    #[test]
+    fn explicit_user_mode_rejects_other_users_in_the_same_tenant() {
+        let allowed = vec![
+            OWNER.to_owned(),
+            "dddddddd-dddd-dddd-dddd-dddddddddddd".to_owned(),
+        ];
+        let verifier = EntraVerifier::for_users(TENANT, APP, &allowed).unwrap();
+        for (owner, accepted) in [
+            (OWNER, true),
+            ("dddddddd-dddd-dddd-dddd-dddddddddddd", true),
+            ("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee", false),
+        ] {
+            let claims: Claims = serde_json::from_value(json!({
+                "tid":TENANT,"oid":owner,"aud":APP,"iss":verifier.authority(),
+                "exp":1100,"nbf":900,"scp":"access_as_user"
+            }))
+            .unwrap();
+            assert_eq!(verifier.validate_claims(&claims, 1000).is_ok(), accepted);
+        }
     }
 
     #[test]

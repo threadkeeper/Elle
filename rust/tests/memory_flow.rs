@@ -249,6 +249,40 @@ fn shared_wisdom_is_separate_and_restore_does_not_reenable_contribution() {
 }
 
 #[test]
+fn one_user_contributes_wisdom_and_another_user_retrieves_it() {
+    let directory = Directory::new();
+    let contributor = owner('b');
+    let reader = owner('c');
+    let lesson =
+        "When a prototype feels stuck, shrink the next step until the result can change your mind.";
+    let mut service = directory.service();
+
+    assert!(service.contribute_wisdom(&contributor, lesson).is_err());
+    service.set_wisdom_consent(&contributor, true, 0).unwrap();
+    let contribution = service.contribute_wisdom(&contributor, lesson).unwrap();
+    assert_eq!(contribution.text, lesson);
+    assert_eq!(
+        service.contribute_wisdom(&contributor, lesson).unwrap().id,
+        contribution.id
+    );
+
+    let shared = service
+        .shared_wisdom("prototype stuck next step", 5)
+        .unwrap();
+    assert_eq!(shared["durableHumanContributions"], 1);
+    assert!(shared.to_string().contains(lesson));
+    assert!(!shared.to_string().contains(contributor.as_str()));
+    assert!(!service.wisdom_consent(&reader).unwrap().consent.enabled);
+
+    drop(service);
+    let reopened = directory.service();
+    let durable = reopened
+        .shared_wisdom("prototype stuck next step", 5)
+        .unwrap();
+    assert!(durable.to_string().contains(lesson));
+}
+
+#[test]
 fn private_and_shared_servers_expose_disjoint_tools() {
     let private = mcp::definitions_for_role(mcp::ServerRole::Private);
     let wisdom = mcp::definitions_for_role(mcp::ServerRole::SharedWisdom);
@@ -264,6 +298,7 @@ fn private_and_shared_servers_expose_disjoint_tools() {
     assert!(private_names.contains("elle_remember"));
     assert!(!private_names.contains("elle_set_wisdom_consent"));
     assert!(wisdom_names.contains("elle_shared_wisdom"));
+    assert!(wisdom_names.contains("elle_contribute_wisdom"));
     assert!(!wisdom_names.contains("elle_list_memories"));
 
     let directory = Directory::new();

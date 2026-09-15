@@ -14,6 +14,8 @@ pub enum RecordKind {
     Personality,
     /// Explicit opt-in state for future quarantined reflection.
     WisdomConsent,
+    /// Sanitized, explicitly contributed guidance in the shared partition.
+    SharedWisdom,
 }
 
 /// Persisted envelope; free text is inside `ciphertext`, never in index metadata.
