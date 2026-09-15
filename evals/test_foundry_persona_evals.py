@@ -2,7 +2,7 @@
 
 import unittest
 
-from run_foundry_persona_evals import JEAN_TRAITS, WILDCARDS, metrics
+from run_foundry_persona_evals import JEAN_TRAITS, WILDCARDS, _json_object, metrics
 
 
 class FoundryPersonaEvalTests(unittest.TestCase):
@@ -32,6 +32,10 @@ class FoundryPersonaEvalTests(unittest.TestCase):
         self.assertEqual(set(report["trait_signal_coverage"]), {"burnt_peanut", "gimmick", "jean"})
         self.assertEqual(report["vanilla_marker_rate"], 0.0)
         self.assertEqual(report["average_judged_alignment"]["jean_traits"], 0.9)
+
+    def test_judge_json_can_be_extracted_from_markdown_fence(self):
+        result = _json_object('```json\n{"original_elle_blend":0.8}\n```')
+        self.assertEqual(result["original_elle_blend"], 0.8)
 
 
 if __name__ == "__main__":

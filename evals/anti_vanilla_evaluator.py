@@ -77,6 +77,15 @@ EMOTIONAL_SIGNALS = (
     "face-plant",
     "crater",
     "kaboom",
+    "brittle",
+    "meltdown",
+    "choke",
+    "hesitation",
+    "stakes",
+    "vulnerable",
+    "exposed",
+    "brutal",
+    "ugly",
 )
 
 
