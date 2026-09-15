@@ -1,5 +1,13 @@
 # Elle
 
+<p align="center">
+  <img src="https://custom-icon-badges.demolab.com/badge/Built%20with-VS%20Code-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white" alt="VS Code" />
+  <img src="https://img.shields.io/badge/using-GitHub%20Copilot-8957e5?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="GitHub Copilot" />
+  <img src="https://custom-icon-badges.demolab.com/badge/assisted%20by-GPT--5.6%20Sol%20Fast-412991?style=for-the-badge&logo=openai&logoColor=white" alt="GPT-5.6 Sol Fast" />
+</p>
+
+![Ellephant celebrates remaining operational](docs/images/ellephant-still-running.png)
+
 Private memory and a recognizably humanistic personality for the AI assistants you already use.
 
 ## How Elle works, without the jargon
@@ -111,6 +119,11 @@ Elle does not read every Copilot conversation or replace Copilot's built-in memo
 MCP can provide memory, personality guidance and tools, but the host still controls the base model, autonomous loop, tool selection and final wording. We therefore do not assume that installing an MCP guarantees the Elle experience.
 
 The acceptance criterion is deliberately demanding: if the connected experience repeatedly sounds like a generic OpenAI or Anthropic chatbot, the experiment has failed. The repository contains a Foundry-compatible custom evaluator and a curated **15-case gate**. It covers all eleven interaction situations and tests each of the seven criteria at least twice: non-template voice, contextual specificity, memory continuity, natural register, emotional attunement, useful initiative and bounded variation. Every case generates its own response. Known vanilla-chatbot markers cause an immediate zero.
+
+The deployed Microsoft 365 Copilot system prompt is versioned in
+[`ELLE_COPILOT_STUDIO_PROMPT.md`](ELLE_COPILOT_STUDIO_PROMPT.md). It includes
+standing authorization to save a concise private record of every conversation
+turn while excluding secrets and other highly sensitive values.
 
 Run `python evals/export_cases.py` to create the JSONL dataset for a Foundry batch evaluation. The **Live persona evaluation** GitHub workflow goes further: it invokes Foundry web search on every run, refreshes the public creator research with citations, blends the default profile, generates 15 high-signal responses, separately judges every response against all three domain-general observable trait sets and the original Elle blend, records persona-signal and cadence statistics, and revises the profile from failed cases for up to three passes. It preserves the best pass and requires 15/15, zero vanilla markers, minimum average alignment of 0.35 for TheBurntPeanut traits, 0.40 for Gimmick traits, 0.70 for Jean traits, 0.70 for the original Elle blend, and no individual blend score below 0.40. It uploads the generated profile, per-response judgments and report as evidence.
 
