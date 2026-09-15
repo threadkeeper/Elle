@@ -139,62 +139,114 @@ tokens for caller identity.
     required to create and manage the agent. Verify the role associations
     directly if environment discovery remains empty after sign-in.
 
-31. **Create two custom MCP connectors.** Configure one connector for each HTTPS
-    MCP endpoint. Use the same Entra OAuth client and fully qualified delegated
-    API scope, but keep distinct connector IDs and callback URIs.
+31. **Create the Shared Wisdom MCP connector.** Configure the Shared Wisdom HTTPS
+    MCP endpoint as a custom connector. Use the Entra OAuth client and fully
+    qualified delegated API scope.
 
-32. **Share connector definitions with users.** Grant intended users read/use
-    access to both custom connector records. They do not need edit access.
-    Without record read access, connection creation can fail before OAuth and
-    the MCP endpoint receives no request.
+32. **Add Private Elle as a direct MCP server.** In the agent editor, select
+    **Add tool**, open **Model Context Protocol (MCP)**, select **Add**, and then
+    select **Model Context Protocol (MCP)** again to create a new server. Do not
+    select a previously created Private connector from the catalog when
+    recovering from a stale or broken tool definition.
 
-33. **Create the Copilot Studio agent.** Enable generative orchestration, add
-    clear privacy instructions, and attach Private Elle and Shared Wisdom as
-    separate MCP tools using invoker authentication.
+33. **Enter the direct Private server details.** Supply a generic server name and
+    description, and set the server URL to
+    `https://<private-app-host>/mcp`. Select **OAuth 2.0** authentication and
+    **Manual** configuration.
 
-34. **Publish to Microsoft 365 and Teams.** Enable the channel, publish the
+34. **Configure direct Private OAuth.** Enter the OAuth client ID and a dedicated
+    client secret created for the Copilot Studio MCP definition. Use the
+    tenant-specific authorization endpoint, token endpoint, and refresh
+    endpoint. Set scopes to
+    `api://<api-application-id>/access_as_user offline_access`. Store the secret
+    only in Entra and Copilot Studio; never put it in source control,
+    documentation, logs, or agent instructions.
+
+35. **Register the generated callback URI.** Start connection creation once so
+    Copilot Studio displays or sends its generated
+    `https://global.consent.azure-apim.net/redirect/<connector-name>` callback.
+    Append that exact URI to the OAuth client's web redirect URIs in Entra.
+    Preserve all existing callback URIs. Retry the OAuth flow only after the new
+    URI is present.
+
+36. **Create the maker connection with an allowed test identity.** Complete the
+    new direct server's OAuth connection using an identity accepted by the
+    Private server's deployment policy. This connection lets Copilot Studio
+    discover the MCP tool inventory; it does not replace per-user runtime
+    authentication.
+
+37. **Keep the Private tool in User mode.** After the tool inventory loads,
+    choose **User** authentication mode and attach **Elle Private Direct** to the
+    agent. Do not leave it in **Maker** mode, which would bind runtime calls to
+    the maker connection instead of requiring each caller's connection.
+
+38. **Keep the agent surface minimal.** Disable **Memory (Preview)**, do not add
+    knowledge sources or connected agents, and disable web grounding when the
+    test is intended to isolate the two Elle MCP services. In this deployment,
+    disabling Memory Preview stopped the Microsoft 365 conversation UI from
+    failing after conversation creation.
+
+39. **Create the Copilot Studio agent.** Enable generative orchestration, add
+    clear privacy instructions, and attach only Private Elle Direct and Shared
+    Wisdom as separate MCP tools using User/invoker authentication.
+
+40. **Share any connector-backed definitions with users.** Grant intended users
+    read/use access to custom connector records that remain in use. They do not
+    need edit access. Direct MCP server definitions instead prompt each user to
+    create their own runtime connection.
+
+41. **Publish to Microsoft 365 and Teams.** Enable the channel, publish the
     agent, select the intended audience, and submit through the organization
     catalog approval process when broad discovery is required.
 
-35. **Configure Copilot Credits.** Link an eligible billing plan or allocate
+42. **Configure Copilot Credits.** Link an eligible billing plan or allocate
     prepaid capacity. Confirm the effective environment entitlement rather than
     relying only on the billing-policy status.
 
-36. **Allocate capacity to the environment.** Assign the required Copilot
+43. **Allocate capacity to the environment.** Assign the required Copilot
     Credits to the agent environment and choose whether it may draw from the
     unallocated tenant pool. Verify that environment status reports
     `WithinCapacity`.
 
-37. **Create end-user connections.** Each user opens the agent connection page,
-    creates their own OAuth connection for each connector, explicitly chooses
-    their own account, and binds both valid connections.
+44. **Create end-user connections.** Each user opens the agent connection page,
+    creates their own OAuth connection for Shared Wisdom and Private Elle
+    Direct, explicitly chooses their own account, and confirms both show
+    `Connected`.
 
-38. **Start a fresh conversation.** Tool availability can be snapshotted when a
+45. **Start a fresh conversation.** Tool availability can be snapshotted when a
     conversation starts. After changing connectors, permissions, or
     connections, republish the agent and start a new conversation.
 
-39. **Test Shared Wisdom.** Ask an explicit shared query and verify that a
+46. **Test Shared Wisdom.** Ask an explicit shared query and verify that a
     reviewed lesson is returned without private user context.
 
-40. **Test private recall.** Explicitly request the Private Elle context tool and
+47. **Test private recall.** Explicitly request the Private Elle context tool and
     verify that the response reflects only the signed-in user's synthetic
     history.
 
-41. **Test cross-user isolation.** Repeat with a second user. Confirm that both
+48. **Test cross-user isolation.** Repeat with a second user. Confirm that both
     users can retrieve Shared Wisdom while neither can retrieve the other's
     private memories.
 
-42. **Test generic MCP clients.** Configure each remote server with `type:
+49. **Test generic MCP clients.** Configure each remote server with `type:
     "http"`, its `/mcp` URL, and a fixed OAuth client ID when the authorization
     server does not support dynamic client registration. Verify the browser
     requests the fully qualified API scope.
 
-43. **Monitor safely.** Stream each Container App independently during retries.
+50. **Monitor safely.** Stream each Container App independently during retries.
     If no Private request appears, investigate host tool discovery, connector
     permissions, connection binding, or publication state before investigating
     Cosmos.
 
-44. **Keep operations bounded.** Set cost alerts, document temporary-capacity
+51. **Interpret Copilot Studio authorization errors at both layers.** A
+    Copilot Studio `modelcontextprotocol/listtools` response can report `403`
+    because its token exchange lacks connection ACL access even when the Private
+    service itself records `401 token_rejected`. Check both the Power Platform
+    response body and redacted Container App diagnostics. A green connection
+    status alone does not prove that a usable bearer token reached the MCP
+    server.
+
+52. **Keep operations bounded.** Set cost alerts, document temporary-capacity
     expiry, remove elevated setup roles when no longer needed, rotate client
     credentials, and retain only synthetic data until production controls are
     complete.
@@ -206,10 +258,13 @@ tokens for caller identity.
 3. Anonymous `POST /mcp` returns `401` from both services.
 4. Protected-resource metadata advertises the fully qualified delegated scope.
 5. Private and Shared Wisdom expose disjoint tool catalogs.
-6. Both connector definitions are readable by intended end users.
-7. Each end-user connection shows `Connected`.
-8. The environment has effective, allocated Copilot Credits.
-9. Shared Wisdom returns reviewed guidance.
-10. Private recall returns only the caller's partition.
-11. A second user cannot retrieve the first user's private data.
-12. Logs contain protocol metadata and redacted errors only.
+6. The direct Private MCP definition can load its tool inventory.
+7. The Private tool uses User authentication mode, not Maker mode.
+8. Memory Preview, web grounding, knowledge, and connected agents are disabled
+   for the isolated two-MCP test.
+9. Each end-user connection shows `Connected`.
+10. The environment has effective, allocated Copilot Credits.
+11. Shared Wisdom returns reviewed guidance.
+12. Private recall returns only the caller's partition.
+13. A second user cannot retrieve the first user's private data.
+14. Logs contain protocol metadata and redacted errors only.
