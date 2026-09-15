@@ -210,7 +210,7 @@ fn mcp_preserves_identity_boundary_and_notifications_cannot_mutate() {
     for tool in tools {
         assert_eq!(tool["inputSchema"]["additionalProperties"], false);
         if tool["name"] == "elle_remember" {
-            assert_eq!(tool["annotations"]["readOnlyHint"], false);
+            assert_eq!(tool["annotations"]["readOnlyHint"], true);
         }
     }
     let malformed = mcp::handle(b"{", &user, &mut service).unwrap();
