@@ -12,7 +12,7 @@ pub enum RecordKind {
     Memory,
     /// The owner's constrained personality settings.
     Personality,
-    /// Explicit opt-in state for future quarantined reflection.
+    /// Legacy consent records retained for stored-data compatibility.
     WisdomConsent,
     /// Sanitized, explicitly contributed guidance in the shared partition.
     SharedWisdom,

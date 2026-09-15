@@ -196,10 +196,6 @@ fn run() -> Result<()> {
                     .position(|user| user.key == seed.wisdom.contributor)
                     .ok_or(Error::Integrity("Invalid synthetic Wisdom contributor"))?;
                 let owner = &owners[index];
-                let consent = service.wisdom_consent(owner)?;
-                if !consent.consent.enabled {
-                    service.set_wisdom_consent(owner, true, consent.version)?;
-                }
                 service.contribute_wisdom(owner, &seed.wisdom.text)?;
             }
         }

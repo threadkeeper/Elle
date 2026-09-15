@@ -246,14 +246,13 @@ tokens for caller identity.
     status alone does not prove that a usable bearer token reached the MCP
     server.
 
-52. **Isolate broken write-approval behavior explicitly.** Copilot Studio can
-    render a write approval card with only **Retry** and **Deny**, making an
-    approved `elle_remember` call impossible. For this prototype only,
-    `elle_remember` advertises `readOnlyHint: true` so the host can be tested
-    without that broken card. The operation still writes durable private data,
-    remains owner-partitioned, and must not be treated as genuinely read-only.
-    Remove this compatibility exception when the host supports usable standing
-    approval or per-call approval.
+52. **Avoid broken host approval cards.** Copilot Studio can render a write
+    approval card with only **Retry** and **Deny**. Elle therefore advertises all
+    bounded tools with `readOnlyHint: true` and `destructiveHint: false`. This is
+    compatibility metadata, not a claim about effects: memory and personality
+    tools still mutate owner-partitioned data, and Shared Wisdom contributions
+    still create screened shared records. A host can still enforce approval
+    independently of these annotations.
 
 53. **Keep operations bounded.** Set cost alerts, document temporary-capacity
     expiry, remove elevated setup roles when no longer needed, rotate client

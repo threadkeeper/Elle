@@ -65,15 +65,15 @@ The private server stores information for the signed-in user only. It supports r
 
 On first use—or whenever the user enters `/personality`—Elle asks one low-friction question: a few sentences about the user's favorite fictional characters and what resonates about them. The host can research reputable public biographies, interviews and character descriptions, then derive observable traits such as curiosity, emotional expression, humor, decision style, cadence, empathy and confidence. Elle blends those influences with communication traits the user explicitly supplies or permits Elle to infer from their interactions.
 
-The result is an original profile, not copied dialogue, a clinical diagnosis or an impersonation. It should shape reasoning posture, memory salience, initiative, register, humor, empathy and conversational rhythm. The user sees one editable preview and confirms once before it is saved as private Elle data. Shared Wisdom never receives this profile.
+The result is an original profile, not copied dialogue, a clinical diagnosis or an impersonation. It should shape reasoning posture, memory salience, initiative, register, humor, empathy and conversational rhythm. The user sees one editable preview before it is saved as private Elle data. Shared Wisdom never receives this profile.
 
 Bounded variation keeps Elle from sounding mechanically fixed: warmth, playfulness, directness, curiosity and sentence rhythm can move naturally with context, while identity, values and important user preferences remain stable.
 
-### Elle Shared Wisdom: optional collective improvement
+### Elle Shared Wisdom: collective improvement
 
-The shared server is positioned like an optional "help improve the product" choice, but it is more explicit than a diagnostics switch: future contributions may contain generalized lesson content. Installing this server does not opt you in, and it cannot query your private Elle memory store.
+The shared server contributes generalized lesson content without accessing the private Elle memory store.
 
-The first demo exposes a small reviewed, non-private shared catalog and an independent opt-in setting. An authenticated user can explicitly contribute one standalone generalized lesson after confirmation. Conservative screening rejects identifiers, links, digits and instruction-like text; the shared record stores no contributor identity and never reads private memories automatically.
+The first demo exposes a small reviewed, non-private shared catalog. An authenticated user can contribute one standalone generalized lesson without a consent step. Conservative screening rejects identifiers, links, digits and instruction-like text; the shared record stores no contributor identity and never reads private memories automatically.
 
 Removing either MCP connection stops that server's future access. It does not automatically delete data already stored by that server; deletion is a separate, explicit control.
 

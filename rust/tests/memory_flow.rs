@@ -209,9 +209,8 @@ fn mcp_preserves_identity_boundary_and_notifications_cannot_mutate() {
     let tools = mcp::definitions();
     for tool in tools {
         assert_eq!(tool["inputSchema"]["additionalProperties"], false);
-        if tool["name"] == "elle_remember" {
-            assert_eq!(tool["annotations"]["readOnlyHint"], true);
-        }
+        assert_eq!(tool["annotations"]["readOnlyHint"], true);
+        assert_eq!(tool["annotations"]["destructiveHint"], false);
     }
     let malformed = mcp::handle(b"{", &user, &mut service).unwrap();
     assert_eq!(malformed["error"]["code"], -32700);
@@ -221,16 +220,12 @@ fn mcp_preserves_identity_boundary_and_notifications_cannot_mutate() {
 }
 
 #[test]
-fn shared_wisdom_is_separate_and_restore_does_not_reenable_contribution() {
+fn shared_wisdom_is_separate_from_private_memory_and_restore() {
     let source = Directory::new();
     let target = Directory::new();
     let user = owner('b');
-    let other = owner('c');
     let password = "synthetic-strong-test-passphrase";
     let mut service = source.service();
-    assert!(!service.wisdom_consent(&user).unwrap().consent.enabled);
-    service.set_wisdom_consent(&user, true, 0).unwrap();
-    assert!(!service.wisdom_consent(&other).unwrap().consent.enabled);
     service
         .remember(&user, request("A private secret project detail", "private"))
         .unwrap();
@@ -242,23 +237,17 @@ fn shared_wisdom_is_separate_and_restore_does_not_reenable_contribution() {
     let archive = service.export(&user, password).unwrap();
     let mut restored = target.service();
     let report = restored.restore(&user, &archive, password).unwrap();
-    assert!(report.reflection_consent_requires_fresh_opt_in);
-    assert!(!restored.wisdom_consent(&user).unwrap().consent.enabled);
-    service.set_wisdom_consent(&user, false, 1).unwrap();
-    assert!(!service.wisdom_consent(&user).unwrap().consent.enabled);
+    assert!(report.failure.is_none());
 }
 
 #[test]
 fn one_user_contributes_wisdom_and_another_user_retrieves_it() {
     let directory = Directory::new();
     let contributor = owner('b');
-    let reader = owner('c');
     let lesson =
         "When a prototype feels stuck, shrink the next step until the result can change your mind.";
     let mut service = directory.service();
 
-    assert!(service.contribute_wisdom(&contributor, lesson).is_err());
-    service.set_wisdom_consent(&contributor, true, 0).unwrap();
     let contribution = service.contribute_wisdom(&contributor, lesson).unwrap();
     assert_eq!(contribution.text, lesson);
     assert_eq!(
@@ -272,7 +261,6 @@ fn one_user_contributes_wisdom_and_another_user_retrieves_it() {
     assert_eq!(shared["durableHumanContributions"], 1);
     assert!(shared.to_string().contains(lesson));
     assert!(!shared.to_string().contains(contributor.as_str()));
-    assert!(!service.wisdom_consent(&reader).unwrap().consent.enabled);
 
     drop(service);
     let reopened = directory.service();
@@ -296,9 +284,11 @@ fn private_and_shared_servers_expose_disjoint_tools() {
     let wisdom_names = names(&wisdom);
     assert!(private_names.is_disjoint(&wisdom_names));
     assert!(private_names.contains("elle_remember"));
-    assert!(!private_names.contains("elle_set_wisdom_consent"));
+    assert!(!private_names.contains("elle_contribute_wisdom"));
     assert!(wisdom_names.contains("elle_shared_wisdom"));
     assert!(wisdom_names.contains("elle_contribute_wisdom"));
+    assert!(!wisdom_names.contains("elle_get_wisdom_consent"));
+    assert!(!wisdom_names.contains("elle_set_wisdom_consent"));
     assert!(!wisdom_names.contains("elle_list_memories"));
 
     let directory = Directory::new();

@@ -59,7 +59,7 @@ Show encrypted export and restore. Explain that the backup contains Elle memorie
 ## Judge questions to invite
 
 - Can User 2 see User 1's private history? No; private records remain partitioned by Entra tenant and object ID.
-- Is Wisdom automatic surveillance? No; contribution requires explicit opt-in and an explicit tool call.
+- Is Wisdom automatic surveillance? No; contributions are standalone, screened tool calls that cannot read private memory.
 - Does the application retain value beyond the LLM? Yes; encrypted private context and sanitized shared lessons persist independently of the selected model.
 - What is live today? Entra-authenticated MCP endpoints, encrypted memory, personality, export and restore, Model Router configuration, and durable Shared Wisdom.
 - What remains prototype-grade? Host integration consent, contribution moderation and production operational controls.

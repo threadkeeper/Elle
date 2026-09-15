@@ -15,21 +15,10 @@ use crate::identity::OwnerId;
 use crate::memory::{Memory, MemoryPayload, RecallResult, RememberRequest};
 use crate::personality::Personality;
 use crate::repository::{MemoryRepository, RecordKind, StoredRecord};
-use crate::wisdom::{screen_text, WisdomCatalog, WisdomConsent, WisdomEntry, WisdomProvenance};
+use crate::wisdom::{screen_text, WisdomCatalog, WisdomEntry, WisdomProvenance};
 
 const PROFILE_ID: &str = "personality";
-const CONSENT_ID: &str = "wisdom-consent";
 const SHARED_WISDOM_OWNER: &str = "shared-wisdom";
-
-/// Versioned private-reflection preference; sharing private data is never implied.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(deny_unknown_fields)]
-pub struct WisdomConsentState {
-    /// Owner-selected opt-in, disabled by default.
-    pub consent: WisdomConsent,
-    /// Zero denotes the default, unstored preference.
-    pub version: u64,
-}
 
 /// Versioned personality settings returned to the owner.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,8 +37,8 @@ struct Snapshot {
     schema_version: u32,
     memories: Vec<Memory>,
     personality: PersonalityState,
-    #[serde(default)]
-    wisdom_consent: WisdomConsentState,
+    #[serde(default, rename = "wisdom_consent", skip_serializing)]
+    _legacy_wisdom_consent: Option<Value>,
 }
 
 /// Restore outcome explicitly reports failures and does not claim atomicity.
@@ -61,13 +50,11 @@ pub struct RestoreReport {
     pub skipped_existing: Vec<String>,
     /// Whether personality settings were restored into an empty profile.
     pub personality_restored: bool,
-    /// Consent is deliberately not activated by restoring an archive.
-    pub reflection_consent_requires_fresh_opt_in: bool,
     /// A failure after some writes; retry safely adds only remaining records.
     pub failure: Option<String>,
 }
 
-/// Coordinates memory, identity and consent-sensitive mutation boundaries.
+/// Coordinates memory, identity and mutation boundaries.
 pub struct MemoryService {
     repository: Box<dyn MemoryRepository>,
     cipher: FieldCipher,
@@ -336,7 +323,7 @@ impl MemoryService {
             schema_version: 1,
             memories: self.all_memories(owner)?,
             personality: self.personality(owner)?,
-            wisdom_consent: self.wisdom_consent(owner)?,
+            _legacy_wisdom_consent: None,
         };
         let data = serde_json::to_value(snapshot)
             .map_err(|_| Error::Integrity("Cannot encode application snapshot"))?;
@@ -367,7 +354,6 @@ impl MemoryService {
             inserted: Vec::new(),
             skipped_existing: Vec::new(),
             personality_restored: false,
-            reflection_consent_requires_fresh_opt_in: snapshot.wisdom_consent.consent.enabled,
             failure: None,
         };
         for memory in &snapshot.memories {
@@ -436,13 +422,8 @@ impl MemoryService {
         }))
     }
 
-    /// Store one explicitly approved, privacy-screened lesson without contributor identity.
-    pub fn contribute_wisdom(&mut self, owner: &OwnerId, text: &str) -> Result<WisdomEntry> {
-        if !self.wisdom_consent(owner)?.consent.enabled {
-            return Err(Error::InvalidInput(
-                "Explicit Wisdom contribution consent is required",
-            ));
-        }
+    /// Store one privacy-screened lesson without contributor identity.
+    pub fn contribute_wisdom(&mut self, _owner: &OwnerId, text: &str) -> Result<WisdomEntry> {
         screen_text(text, 360)?;
         let id = format!("human-{:x}", Sha256::digest(text.as_bytes()));
         if let Some(existing) = self.repository.get(SHARED_WISDOM_OWNER, &id)? {
@@ -479,64 +460,6 @@ impl MemoryService {
             return self.decode_wisdom_entry(&existing);
         }
         Ok(entry)
-    }
-
-    /// Read durable reflection consent; absence is an explicit disabled default.
-    pub fn wisdom_consent(&self, owner: &OwnerId) -> Result<WisdomConsentState> {
-        let Some(record) = self.repository.get(owner.as_str(), CONSENT_ID)? else {
-            return Ok(WisdomConsentState::default());
-        };
-        if record.owner_id != owner.as_str() || record.kind != RecordKind::WisdomConsent {
-            return Err(Error::Integrity("Invalid wisdom consent ownership"));
-        }
-        let plaintext = self
-            .cipher
-            .decrypt(owner.as_str(), CONSENT_ID, &record.ciphertext)?;
-        let consent = serde_json::from_slice(&plaintext)
-            .map_err(|_| Error::Integrity("Invalid wisdom consent payload"))?;
-        Ok(WisdomConsentState {
-            consent,
-            version: record.version,
-        })
-    }
-
-    /// Persist an explicit choice. No reflection worker or publication is activated.
-    pub fn set_wisdom_consent(
-        &mut self,
-        owner: &OwnerId,
-        enabled: bool,
-        expected_version: u64,
-    ) -> Result<WisdomConsentState> {
-        let current = self.repository.get(owner.as_str(), CONSENT_ID)?;
-        if current.as_ref().map_or(0, |record| record.version) != expected_version {
-            return Err(Error::Conflict);
-        }
-        let consent = WisdomConsent { enabled };
-        let plaintext = serde_json::to_vec(&consent)
-            .map_err(|_| Error::InvalidInput("Cannot serialize consent"))?;
-        let now = now()?;
-        let record = StoredRecord {
-            id: CONSENT_ID.to_owned(),
-            owner_id: owner.as_str().to_owned(),
-            kind: RecordKind::WisdomConsent,
-            ciphertext: self
-                .cipher
-                .encrypt(owner.as_str(), CONSENT_ID, &plaintext)?,
-            version: expected_version.checked_add(1).ok_or(Error::Conflict)?,
-            created_at: current.as_ref().map_or(now, |record| record.created_at),
-            updated_at: now,
-            expires_at: None,
-            embedding: None,
-        };
-        if current.is_some() {
-            self.repository.replace(&record, expected_version)?;
-        } else if !self.repository.create(&record)? {
-            return Err(Error::Conflict);
-        }
-        Ok(WisdomConsentState {
-            consent,
-            version: record.version,
-        })
     }
 
     fn all_memories(&self, owner: &OwnerId) -> Result<Vec<Memory>> {
