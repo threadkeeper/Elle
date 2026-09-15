@@ -1,12 +1,14 @@
 """Research, build, optimize and evaluate Elle's default personality in Foundry."""
 
 import argparse
+import concurrent.futures
 import hashlib
 import json
 import os
 import random
 import re
 import subprocess
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -97,11 +99,13 @@ class Foundry:
         self.model = model
         self._token = None
         self._token_time = 0
+        self._token_lock = threading.Lock()
 
     def response(self, prompt, *, web=False):
-        if self._token is None or time.time() - self._token_time > 2700:
-            self._token = _token()
-            self._token_time = time.time()
+        with self._token_lock:
+            if self._token is None or time.time() - self._token_time > 2700:
+                self._token = _token()
+                self._token_time = time.time()
         payload = {"model": self.model, "input": prompt}
         if web:
             payload["tools"] = [{"type": "web_search"}]
@@ -301,19 +305,34 @@ Return JSON only:
   "reason": "<one concise sentence>"
 }}
 """
-    result = _json_object(client.response(prompt)[0])
-    for key in (
-        "burnt_peanut_traits",
-        "gimmick_traits",
-        "jean_traits",
-        "original_elle_blend",
-    ):
-        score = result.get(key)
-        if not isinstance(score, (int, float)) or not 0 <= score <= 1:
-            raise RuntimeError(f"Foundry judge returned an invalid {key} score")
-    if not isinstance(result.get("reason"), str) or not result["reason"].strip():
-        raise RuntimeError("Foundry judge returned no reason")
-    return result
+    for attempt in range(3):
+        text = client.response(prompt)[0]
+        try:
+            result = _json_object(text)
+            for key in (
+                "burnt_peanut_traits",
+                "gimmick_traits",
+                "jean_traits",
+                "original_elle_blend",
+            ):
+                score = result.get(key)
+                if not isinstance(score, (int, float)) or not 0 <= score <= 1:
+                    raise RuntimeError(f"Foundry judge returned an invalid {key} score")
+            if not isinstance(result.get("reason"), str) or not result["reason"].strip():
+                raise RuntimeError("Foundry judge returned no reason")
+            return result
+        except (json.JSONDecodeError, RuntimeError) as error:
+            if attempt == 2:
+                raise RuntimeError(
+                    "Foundry judge returned malformed output after 3 attempts"
+                ) from error
+            delay = 2 ** (attempt + 1)
+            print(
+                f"Foundry judge returned malformed output; retrying in {delay}s",
+                flush=True,
+            )
+            time.sleep(delay)
+    raise RuntimeError("Foundry judge request failed")
 
 
 def metrics(rows):
@@ -387,7 +406,7 @@ def quality_key(report):
     )
 
 
-def run(client, iterations, seed):
+def run(client, iterations, seed, workers):
     RESULTS.mkdir(exist_ok=True)
     research = research_personas(client)
     anchor = DEFAULT_PROFILE.read_text(encoding="utf-8")
@@ -395,23 +414,26 @@ def run(client, iterations, seed):
     history = []
     best = None
     for iteration in range(1, iterations + 1):
-        rows = []
-        for index, case in enumerate(build_cases(), 1):
+        cases = build_cases()
+
+        def evaluate(case):
             response, wildcard = generate_response(client, profile, case, seed)
             alignment = judge_alignment(client, profile, research, response)
             score = grade({}, {**case, "response": response})
-            rows.append(
-                {
-                    **case,
-                    "response": response,
-                    "wildcard": wildcard,
-                    "alignment": alignment,
-                    "score": score,
-                }
-            )
+            return {
+                **case,
+                "response": response,
+                "wildcard": wildcard,
+                "alignment": alignment,
+                "score": score,
+            }
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            rows = list(executor.map(evaluate, cases))
+        for index, row in enumerate(rows, 1):
             print(
-                f"[{iteration}:{index:02d}/77] {case['id']} score={score:.0f} "
-                f"blend={alignment['original_elle_blend']:.2f}",
+                f"[{iteration}:{index:02d}/77] {row['id']} score={row['score']:.0f} "
+                f"blend={row['alignment']['original_elle_blend']:.2f}",
                 flush=True,
             )
         report = metrics(rows)
@@ -513,9 +535,15 @@ def main():
     )
     parser.add_argument("--model", default=os.getenv("ELLE_EVAL_MODEL", "o4-mini"))
     parser.add_argument("--iterations", type=int, default=3, choices=range(1, 6))
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=int(os.getenv("ELLE_EVAL_WORKERS", "16")),
+        choices=range(1, 33),
+    )
     parser.add_argument("--seed", default="elle-default-v1")
     args = parser.parse_args()
-    run(Foundry(args.endpoint, args.model), args.iterations, args.seed)
+    run(Foundry(args.endpoint, args.model), args.iterations, args.seed, args.workers)
 
 
 if __name__ == "__main__":

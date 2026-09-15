@@ -1,6 +1,8 @@
 """Offline contract tests for the live Foundry persona evaluation runner."""
 
+import json
 import unittest
+from unittest import mock
 
 from run_foundry_persona_evals import (
     ALIGNMENT_THRESHOLDS,
@@ -9,6 +11,7 @@ from run_foundry_persona_evals import (
     WILDCARD_INSTRUCTIONS,
     _json_object,
     alignment_gate,
+    judge_alignment,
     metrics,
 )
 
@@ -45,6 +48,31 @@ class FoundryPersonaEvalTests(unittest.TestCase):
     def test_judge_json_can_be_extracted_from_markdown_fence(self):
         result = _json_object('```json\n{"original_elle_blend":0.8}\n```')
         self.assertEqual(result["original_elle_blend"], 0.8)
+
+    def test_judge_retries_malformed_output(self):
+        valid = {
+            "burnt_peanut_traits": 0.7,
+            "gimmick_traits": 0.8,
+            "jean_traits": 0.9,
+            "original_elle_blend": 0.85,
+            "reason": "The response coherently combines all four trait groups.",
+        }
+
+        class Client:
+            def __init__(self):
+                self.responses = iter(["not json", json.dumps(valid)])
+                self.calls = 0
+
+            def response(self, prompt):
+                del prompt
+                self.calls += 1
+                return next(self.responses), []
+
+        client = Client()
+        with mock.patch("run_foundry_persona_evals.time.sleep"):
+            result = judge_alignment(client, "profile", {"raw": "research"}, "response")
+        self.assertEqual(result, valid)
+        self.assertEqual(client.calls, 2)
 
     def test_full_gate_requires_all_77_and_trait_alignment(self):
         report = {
