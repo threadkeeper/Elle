@@ -5,8 +5,9 @@
 //! socket deadlines. No export or restore routes are provided.
 
 use std::io::Read;
+use std::sync::atomic::{AtomicU64, Ordering};
 
-use serde_json::json;
+use serde_json::{json, Value};
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 use zeroize::Zeroizing;
 
@@ -14,6 +15,8 @@ use crate::auth::EntraVerifier;
 use crate::error::{Error, Result};
 use crate::mcp;
 use crate::service::MemoryService;
+
+static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 /// Serve a single-owner, sequential JSON MCP endpoint until the listener fails.
 ///
@@ -69,10 +72,23 @@ fn handle_request(
     service: &mut MemoryService,
     role: mcp::ServerRole,
 ) -> Result<()> {
+    let request_id = REQUEST_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let method = format!("{:?}", request.method());
+    let path = request.url().split('?').next().unwrap_or("");
+    eprintln!(
+        "Elle diagnostic: request_id={request_id} role={} method={method} path={path} event=request_started",
+        role.name()
+    );
     match single_header(&request, "Origin") {
         Ok(None) => {}
         Ok(Some(value)) if value == origin => {}
-        _ => return reply(request, 403, r#"{"error":"Forbidden origin"}"#, None),
+        _ => {
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} status=403 error=forbidden_origin",
+                role.name()
+            );
+            return reply(request, 403, r#"{"error":"Forbidden origin"}"#, None);
+        }
     }
     match (request.method(), request.url()) {
         (&Method::Get, "/healthz") => {
@@ -94,12 +110,42 @@ fn handle_request(
     }
 
     let token = match single_header(&request, "Authorization") {
-        Ok(Some(value)) => bearer(value),
-        _ => None,
+        Ok(Some(value)) => match bearer(value) {
+            Some(token) => token,
+            None => {
+                eprintln!(
+                    "Elle diagnostic: request_id={request_id} role={} status=401 error=malformed_bearer",
+                    role.name()
+                );
+                return reply(
+                    request,
+                    401,
+                    r#"{"error":"Unauthorized"}"#,
+                    Some(challenge.clone()),
+                );
+            }
+        },
+        _ => {
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} status=401 error=missing_authorization",
+                role.name()
+            );
+            return reply(
+                request,
+                401,
+                r#"{"error":"Unauthorized"}"#,
+                Some(challenge.clone()),
+            );
+        }
     };
-    let owner = match token.and_then(|token| verifier.verify(token).ok()) {
-        Some(owner) => owner,
-        None => {
+    let owner = match verifier.verify(token) {
+        Ok(owner) => owner,
+        Err(error) => {
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} status=401 error=token_rejected detail={}",
+                role.name(),
+                log_value(&error.to_string())
+            );
             return reply(
                 request,
                 401,
@@ -161,9 +207,85 @@ fn handle_request(
     if body.len() > mcp::MAX_MESSAGE_BYTES {
         return reply(request, 413, r#"{"error":"Request too large"}"#, None);
     }
+    let (rpc_method, tool_name) = request_summary(&body);
     match mcp::handle_for_role(&body, &owner, service, role) {
-        Some(response) => reply(request, 200, &response.to_string(), None),
-        None => reply(request, 202, "", None),
+        Some(response) => {
+            let error = response_error(&response);
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} rpc_method={} tool={} status=200 result={}{}",
+                role.name(),
+                rpc_method,
+                tool_name,
+                if error.is_some() { "error" } else { "ok" },
+                error
+                    .map(|detail| format!(" detail={detail}"))
+                    .unwrap_or_default()
+            );
+            reply(request, 200, &response.to_string(), None)
+        }
+        None => {
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} rpc_method={} tool={} status=202 result=notification_accepted",
+                role.name(),
+                rpc_method,
+                tool_name
+            );
+            reply(request, 202, "", None)
+        }
+    }
+}
+
+fn request_summary(body: &[u8]) -> (String, String) {
+    let Ok(value) = serde_json::from_slice::<Value>(body) else {
+        return ("invalid_json".to_owned(), "none".to_owned());
+    };
+    let method = value
+        .get("method")
+        .and_then(Value::as_str)
+        .map(log_value)
+        .unwrap_or_else(|| "missing".to_owned());
+    let tool = value
+        .pointer("/params/name")
+        .and_then(Value::as_str)
+        .map(log_value)
+        .unwrap_or_else(|| "none".to_owned());
+    (method, tool)
+}
+
+fn response_error(response: &Value) -> Option<String> {
+    if let Some(error) = response.pointer("/error/message").and_then(Value::as_str) {
+        return Some(log_value(error));
+    }
+    if response.pointer("/result/isError").and_then(Value::as_bool) != Some(true) {
+        return None;
+    }
+    let text = response
+        .pointer("/result/content/0/text")
+        .and_then(Value::as_str)?;
+    let detail = serde_json::from_str::<Value>(text)
+        .ok()
+        .and_then(|value| value.get("error").and_then(Value::as_str).map(log_value));
+    Some(detail.unwrap_or_else(|| "tool_error".to_owned()))
+}
+
+fn log_value(value: &str) -> String {
+    let sanitized = value
+        .chars()
+        .take(160)
+        .map(|character| {
+            if character.is_ascii_alphanumeric()
+                || matches!(character, '_' | '-' | '/' | '.' | ':' | ' ')
+            {
+                character
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>();
+    if sanitized.is_empty() {
+        "unspecified".to_owned()
+    } else {
+        sanitized
     }
 }
 
