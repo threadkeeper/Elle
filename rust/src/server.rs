@@ -193,7 +193,14 @@ fn handle_request(
     };
     let body = match read_json_body(&mut request) {
         Ok(body) => body,
-        Err((status, message)) => return reply(request, status, message, None),
+        Err((status, message)) => {
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} status={status} error=request_body_rejected detail={}",
+                state.role.name(),
+                log_value(message),
+            );
+            return reply(request, status, message, None);
+        }
     };
     let (rpc_method, tool_name) = request_summary(&body);
     match mcp::handle_for_role(&body, &owner, &mut state.service, state.role) {

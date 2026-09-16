@@ -7,6 +7,8 @@
 !app/
 !app/wisdom/
 !app/wisdom/catalog.json
+!app/demo/
+!app/demo/synthetic-history.json
 !Dockerfile
 !.cargo/
 !.cargo/config.toml
