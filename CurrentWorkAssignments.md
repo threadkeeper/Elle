@@ -404,7 +404,7 @@ released` separately so a local PASS cannot silently become a deployed claim.
 | Package | Status / current lease | Commit / evidence | Next gate |
 | --- | --- | --- | --- |
 | A | Staged; Private transport deployed, not yet released | Commit `62a587f`; Private revision `0000013`; health/auth guards PASS; toolbox v4 progressed from HTTP 405 to delegated authorization | Complete allowlisted-presenter discovery and Private tool smoke test |
-| B | Local-ready for single-presenter demo; multi-user onboarding deferred | Request-scoped toolbox candidate; full tester gate PASS; scoped tester/reviewer DEMO-PASS | Commit/push, stage a new agent version on toolbox v4, and keep agent v3 as rollback |
+| B | Staged for single-presenter demo; multi-user onboarding deferred | Commit `b5a9dab`; full tester gate PASS; scoped tester/reviewer DEMO-PASS; hosted agent v5 active on toolbox v4 with no live traffic | Run the allowlisted-presenter v5 smoke test and keep agent v3 as rollback |
 | C | Blocked on presenter identity, not transport | Toolbox v4 preserves four baseline sources; current administrator is outside the Private allowlist and correctly receives HTTP 401 | Sign in with an allowlisted DemoUser, authorize that same user, then rerun discovery and synthetic cleanup test |
 | D | Planned; no invocation | Existing service/catalog, not attached live | Separate OAuth and Wisdom acceptance |
 | E | Planned; no invocation | Existing excluded connection, not accepted | Confirm supported Work IQ contract/auth |
@@ -412,7 +412,7 @@ released` separately so a local PASS cannot silently become a deployed claim.
 | G-SQL | Planned; no invocation | Scope not yet accepted | Authorized database/entity selection |
 | G-Speech | Planned; no invocation | Not yet accepted | Endpoint/auth/storage inventory |
 | G-Chart | Planned; no invocation | Not yet accepted | Endpoint/artifact/auth inventory |
-| R | Parent responsibility; live writes paused | Gates 915845a; hosted v4 active on toolbox 3, live still v3 | Reconcile candidates, integrate local changes, request release approval |
+| R | Hosted candidate staged; promotion pending presenter gate | Agent v5 active on toolbox v4; toolbox default remains v3; live routing remains 100% agent v3 | Pass presenter smoke, then promote v5 with guarded rollback to v3 |
 
 ## Guidance applied
 
