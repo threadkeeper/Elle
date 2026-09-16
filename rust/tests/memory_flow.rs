@@ -217,6 +217,22 @@ fn mcp_preserves_identity_boundary_and_notifications_cannot_mutate() {
     let initialize = json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}});
     let malformed = mcp::handle(initialize.to_string().as_bytes(), &user, &mut service).unwrap();
     assert_eq!(malformed["error"]["code"], -32602);
+
+    let initialize = json!({"jsonrpc":"2.0","id":2,"method":"initialize","params":{
+        "protocolVersion":mcp::PROTOCOL_VERSION,
+        "capabilities":{},
+        "clientInfo":{"name":"synthetic-test-client","version":"1.0"}
+    }});
+    let initialized = mcp::handle(initialize.to_string().as_bytes(), &user, &mut service).unwrap();
+    assert_eq!(
+        initialized["result"]["protocolVersion"],
+        mcp::PROTOCOL_VERSION
+    );
+    let notification = json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{}});
+    assert!(mcp::handle(notification.to_string().as_bytes(), &user, &mut service).is_none());
+    let list = json!({"jsonrpc":"2.0","id":3,"method":"tools/list","params":{}});
+    let listed = mcp::handle(list.to_string().as_bytes(), &user, &mut service).unwrap();
+    assert!(!listed["result"]["tools"].as_array().unwrap().is_empty());
 }
 
 #[test]

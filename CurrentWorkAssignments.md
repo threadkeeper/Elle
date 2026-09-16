@@ -403,7 +403,7 @@ released` separately so a local PASS cannot silently become a deployed claim.
 
 | Package | Status / current lease | Commit / evidence | Next gate |
 | --- | --- | --- | --- |
-| A | Planned; no invocation | Diagnostic image c2cb998 deployed to both backends | Identify first authorized POST rejection |
+| A | Local-ready; transport candidate accepted, no deployment | Diff `141a1e67704241f11855aa134dec3352d3fa817c`; tester 49/49 + fmt/clippy PASS; reviewer PASS | Prepare deployment preview; then authorized toolbox-v4 discovery must confirm the first POST and live transport |
 | B | Planned; no invocation | Existing global toolbox lifetime not accepted | Reproduce and fix current-request context |
 | C | Planned; no invocation | OAuth/discovery tooling 3202e6d; consent progressed | Private read/write/isolation after transport fix |
 | D | Planned; no invocation | Existing service/catalog, not attached live | Separate OAuth and Wisdom acceptance |

@@ -355,23 +355,34 @@ fn read_json_body(
     {
         return Err((406, r#"{"error":"JSON response required"}"#));
     }
-    let length = match single_header(request, "Content-Length") {
-        Ok(Some(value)) if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) => {
-            match value.parse::<usize>() {
-                Ok(length) => length,
-                Err(_) => {
-                    return Err((413, r#"{"error":"Request too large"}"#));
-                }
-            }
+    let length = match (
+        single_header(request, "Content-Length"),
+        single_header(request, "Transfer-Encoding"),
+    ) {
+        (Ok(Some(_)), Ok(Some(_))) | (Err(_), _) | (_, Err(_)) => {
+            return Err((400, r#"{"error":"Unsupported request framing"}"#));
         }
-        _ => {
+        (Ok(None), Ok(Some(value))) if value.trim().eq_ignore_ascii_case("chunked") => None,
+        (Ok(None), Ok(Some(_))) => {
+            return Err((400, r#"{"error":"Unsupported request framing"}"#));
+        }
+        (Ok(Some(value)), Ok(None))
+            if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) =>
+        {
+            Some(
+                value
+                    .parse::<usize>()
+                    .map_err(|_| (413, r#"{"error":"Request too large"}"#))?,
+            )
+        }
+        (Ok(Some(_)), Ok(None)) => {
+            return Err((411, r#"{"error":"Content-Length required"}"#));
+        }
+        (Ok(None), Ok(None)) => {
             return Err((411, r#"{"error":"Content-Length required"}"#));
         }
     };
-    if single_header(request, "Transfer-Encoding") != Ok(None) {
-        return Err((400, r#"{"error":"Unsupported request framing"}"#));
-    }
-    if length > mcp::MAX_MESSAGE_BYTES {
+    if length.is_some_and(|length| length > mcp::MAX_MESSAGE_BYTES) {
         return Err((413, r#"{"error":"Request too large"}"#));
     }
     let mut body = Zeroizing::new(Vec::new());
@@ -380,7 +391,7 @@ fn read_json_body(
         .take(mcp::MAX_MESSAGE_BYTES as u64 + 1)
         .read_to_end(&mut body)
         .is_err()
-        || body.len() != length
+        || length.is_some_and(|length| body.len() != length)
     {
         return Err((400, r#"{"error":"Invalid request body"}"#));
     }
@@ -549,6 +560,176 @@ fn validate_origin(value: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use std::net::{Shutdown, TcpStream};
+
+    use crate::encryption::FieldCipher;
+    use crate::repository::{MemoryRepository, StoredRecord};
+
+    struct EmptyRepository;
+
+    impl MemoryRepository for EmptyRepository {
+        fn list(&self, _owner_id: &str) -> Result<Vec<StoredRecord>> {
+            Ok(Vec::new())
+        }
+
+        fn get(&self, _owner_id: &str, _id: &str) -> Result<Option<StoredRecord>> {
+            Ok(None)
+        }
+
+        fn create(&mut self, _record: &StoredRecord) -> Result<bool> {
+            Ok(true)
+        }
+
+        fn replace(&mut self, _record: &StoredRecord, _expected_version: u64) -> Result<()> {
+            Ok(())
+        }
+
+        fn delete(&mut self, _owner_id: &str, _id: &str, _expected_version: u64) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    fn read_raw_body(request_parts: &[&[u8]]) -> std::result::Result<Vec<u8>, (u16, &'static str)> {
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let address = server.server_addr().to_ip().unwrap();
+        let worker = std::thread::spawn(move || {
+            let mut request = server.recv().unwrap();
+            read_json_body(&mut request).map(|body| body.to_vec())
+        });
+        let mut stream = TcpStream::connect(address).unwrap();
+        for part in request_parts {
+            stream.write_all(part).unwrap();
+        }
+        stream.shutdown(Shutdown::Write).unwrap();
+        worker.join().unwrap()
+    }
+
+    fn raw_response(request: &[u8]) -> String {
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let address = server.server_addr().to_ip().unwrap();
+        let worker = std::thread::spawn(move || {
+            let request = server.recv().unwrap();
+            let verifier = EntraVerifier::new(
+                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                "cccccccc-cccc-cccc-cccc-cccccccccccc",
+            )
+            .unwrap();
+            let mut state = RuntimeState {
+                verifier,
+                bridge_verifier: None,
+                service: MemoryService::new(
+                    Box::new(EmptyRepository),
+                    FieldCipher::new([7; 32]),
+                    None,
+                ),
+                role: mcp::ServerRole::Private,
+            };
+            let challenge = header("WWW-Authenticate", "Bearer test").unwrap();
+            handle_request(
+                request,
+                &RequestContext {
+                    origin: "https://elle.example.com",
+                    metadata: "{}",
+                    challenge: &challenge,
+                    bridge_policy: None,
+                },
+                &mut state,
+            )
+            .unwrap();
+        });
+        let mut stream = TcpStream::connect(address).unwrap();
+        stream.write_all(request).unwrap();
+        stream.shutdown(Shutdown::Write).unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        worker.join().unwrap();
+        response
+    }
+
+    #[test]
+    fn valid_chunked_json_body_is_decoded() {
+        let request = b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n7\r\n{\"ok\":1\r\n1\r\n}\r\n0\r\n\r\n";
+        assert_eq!(read_raw_body(&[request]).unwrap(), br#"{"ok":1}"#);
+    }
+
+    #[test]
+    fn mixed_case_chunked_with_optional_whitespace_is_decoded() {
+        let request = b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: \tChUnKeD \t\r\n\r\n7\r\n{\"ok\":1\r\n1\r\n}\r\n0\r\n\r\n";
+        assert_eq!(read_raw_body(&[request]).unwrap(), br#"{"ok":1}"#);
+    }
+
+    #[test]
+    fn fixed_length_and_split_chunked_bodies_are_accepted() {
+        let fixed = b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 8\r\n\r\n{\"ok\":1}";
+        assert_eq!(read_raw_body(&[fixed]).unwrap(), br#"{"ok":1}"#);
+
+        let headers = b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n";
+        assert_eq!(
+            read_raw_body(&[headers, b"4\r\n{\"ok\r\n", b"4\r\n\":1}\r\n0\r\n\r\n"]).unwrap(),
+            br#"{"ok":1}"#
+        );
+    }
+
+    #[test]
+    fn malformed_truncated_and_oversized_chunked_bodies_are_rejected() {
+        let headers = b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n";
+        assert_eq!(
+            read_raw_body(&[headers, b"x\r\ninvalid\r\n0\r\n\r\n"])
+                .unwrap_err()
+                .0,
+            400
+        );
+        assert_eq!(
+            read_raw_body(&[headers, b"8\r\n{\"ok\":1\r\n"])
+                .unwrap_err()
+                .0,
+            400
+        );
+
+        let body = vec![b'a'; mcp::MAX_MESSAGE_BYTES + 1];
+        let chunk = format!("{:x}\r\n", body.len());
+        assert_eq!(
+            read_raw_body(&[headers, chunk.as_bytes(), &body, b"\r\n0\r\n\r\n"])
+                .unwrap_err()
+                .0,
+            413
+        );
+    }
+
+    #[test]
+    fn ambiguous_and_unsupported_request_framing_is_rejected() {
+        let cases: &[&[u8]] = &[
+            b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 2\r\nContent-Length: 2\r\n\r\n{}",
+            b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 2\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\r\n0\r\n\r\n",
+            b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\nTransfer-Encoding: chunked\r\n\r\n2\r\n{}\r\n0\r\n\r\n",
+            b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nTransfer-Encoding: gzip, chunked\r\n\r\n2\r\n{}\r\n0\r\n\r\n",
+        ];
+        for request in cases {
+            assert_eq!(read_raw_body(&[request]).unwrap_err().0, 400);
+        }
+
+        let missing =
+            b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n\r\n";
+        assert_eq!(read_raw_body(&[missing]).unwrap_err().0, 411);
+    }
+
+    #[test]
+    fn origin_authentication_and_get_routing_order_is_unchanged() {
+        let forbidden = raw_response(b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nOrigin: https://invalid.example.com\r\nContent-Length: 0\r\n\r\n");
+        assert!(forbidden.starts_with("HTTP/1.1 403 "));
+
+        let unauthorized = raw_response(
+            b"POST /mcp HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: unsupported\r\n\r\n",
+        );
+        assert!(unauthorized.starts_with("HTTP/1.1 401 "));
+        assert!(unauthorized.contains("WWW-Authenticate: Bearer test"));
+
+        let method_not_allowed = raw_response(b"GET /mcp HTTP/1.1\r\nHost: localhost\r\n\r\n");
+        assert!(method_not_allowed.starts_with("HTTP/1.1 405 "));
+        assert!(method_not_allowed.contains("Allow: POST"));
+    }
 
     #[test]
     fn public_origin_cannot_inject_headers_or_urls() {
