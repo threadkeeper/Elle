@@ -25,6 +25,18 @@ jobs:
       - name: Verify curated 15-case anti-vanilla gate
         run: python -m unittest discover -s evals -p "test_*.py"
 
+  foundry-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Install deployment dependencies
+        run: python -m pip install -r foundry-agent/requirements-deploy.txt
+      - name: Test deployment and OAuth configuration
+        run: python -m unittest discover -s foundry-agent -p "test_*.py"
+
   rust:
     runs-on: ubuntu-latest
     timeout-minutes: 20

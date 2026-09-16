@@ -177,6 +177,19 @@ protocol and channel authorization. The same command can route back to a
 previous known-good version. Private MCP connections require per-user OAuth2;
 do not substitute a shared account or disable the server's delegated-token checks.
 
+`configure_private_oauth.py --apply` provisions the separate `elle-private-oauth`
+connection and its dedicated, tenant-pinned OAuth client. It requests only Elle's
+delegated `access_as_user` scope and refresh access. The client credential is
+stored in Foundry's connection, never in the repository; its lifetime is 90 days.
+Rotate it in the application and connection before expiry.
+
+`probe_toolbox.py --version VERSION` performs read-only MCP discovery using the
+current Azure CLI user's identity. An unconnected user receives a
+`CONSENT_REQUIRED` response with a personal authorization link. Authorize using
+the same demo account as the initiating session; never complete an administrator's
+connection link with a demo user's account. Do not promote Private until both
+demo users pass memory-isolation and multi-turn channel tests.
+
 Elle is Jean Van Iddekinge's personal project, adapted from his own pre-existing hobby work. It is not an official Microsoft product or an endorsed Microsoft service.
 
 ## License
