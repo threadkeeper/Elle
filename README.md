@@ -154,6 +154,29 @@ The demo contains three months of synthetic history for two dedicated demo ident
 
 The first milestone is a small, single-user demonstration, not a production-ready service. Memory quality and usefulness will be measured rather than assumed.
 
+### Foundry deployment gates
+
+The hosted runtime is in `foundry-agent`. Use separate Python environments for
+`requirements.txt` (runtime) and `requirements-deploy.txt` (deployment); their
+Foundry SDK version requirements differ.
+
+`deploy.py` stages a candidate without changing live traffic or the default
+toolbox. `--add-mcp NAME=CONNECTION` adds a source to the current default toolbox
+without dropping existing sources. Add `--base-toolbox-version VERSION` when
+restoring the next capability on top of a previously tested candidate. Use
+`--toolbox-version VERSION` to deploy against an unchanged existing toolbox.
+
+Run deployment tests with `python -m unittest discover -s foundry-agent -p
+"test_deploy.py"`. `deploy.py --test-version VERSION` invokes an explicitly
+version-pinned diagnostic session rather than the live traffic selector.
+This smoke check does not replace delegated-user and channel acceptance tests.
+
+Only after acceptance, run `deploy.py --promote-version VERSION
+--expected-live-version CURRENT`. Promotion preserves the existing Activity
+protocol and channel authorization. The same command can route back to a
+previous known-good version. Private MCP connections require per-user OAuth2;
+do not substitute a shared account or disable the server's delegated-token checks.
+
 Elle is Jean Van Iddekinge's personal project, adapted from his own pre-existing hobby work. It is not an official Microsoft product or an endorsed Microsoft service.
 
 ## License
