@@ -65,10 +65,11 @@ The private server stores information for the signed-in user only. It supports r
 
 Copilot Studio's deployed channels currently fail to retain direct-MCP
 end-user connection bindings reliably. The demo therefore also includes a
-Private Bridge connector contract. Power Platform connector SSO performs an
-OAuth on-behalf-of exchange for the Microsoft-authenticated caller; Elle
-validates the resulting delegated token and still constructs every private
-partition from signed `tid` and `oid` claims server-side.
+Private Bridge contract. The bridge validates a delegated Entra token for one
+configured transport actor, while every action supplies `System.User.Id` as a
+fixed, non-model input. Elle accepts only configured demo user IDs and
+constructs their private partitions server-side. Maker-provided action
+credentials avoid per-user connector cards without storing a shared API key.
 
 On first use—or whenever the user enters `/personality`—Elle asks one low-friction question: a few sentences about the user's favorite fictional characters and what resonates about them. The host can research reputable public biographies, interviews and character descriptions, then derive observable traits such as curiosity, emotional expression, humor, decision style, cadence, empathy and confidence. Elle blends those influences with communication traits the user explicitly supplies or permits Elle to infer from their interactions.
 

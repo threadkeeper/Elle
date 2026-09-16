@@ -1,0 +1,56 @@
+{
+  "properties": {
+    "connectionParameters": {
+      "token": {
+        "type": "oauthSetting",
+        "oAuthSettings": {
+          "identityProvider": "aad",
+          "clientId": "9b535737-682f-4e68-a7d3-7a6602477a81",
+          "scopes": [
+            "api://0479a728-6b4d-4d96-8693-ef766bc8e1fe/access_as_user"
+          ],
+          "redirectMode": "GlobalPerConnector",
+          "properties": {
+            "IsFirstParty": "False",
+            "AzureActiveDirectoryResourceId": "api://0479a728-6b4d-4d96-8693-ef766bc8e1fe",
+            "IsOnbehalfofLoginSupported": false
+          },
+          "customParameters": {
+            "loginUri": {
+              "value": "https://login.microsoftonline.com"
+            },
+            "tenantId": {
+              "value": "8d0fb62d-a3b4-445b-bdd6-7954ef2cb817"
+            },
+            "resourceUri": {
+              "value": "api://0479a728-6b4d-4d96-8693-ef766bc8e1fe"
+            },
+            "enableOnbehalfOfLogin": {
+              "value": "false"
+            }
+          }
+        }
+      },
+      "token:TenantId": {
+        "type": "string",
+        "metadata": {
+          "sourceType": "AzureActiveDirectoryTenant"
+        },
+        "uiDefinition": {
+          "constraints": {
+            "required": "false",
+            "hidden": "true"
+          }
+        }
+      }
+    },
+    "connectionParameterSets": {
+      "uiDefinition": {},
+      "values": []
+    },
+    "iconBrandColor": "#07687d",
+    "capabilities": [],
+    "publisher": "threadkeeper",
+    "stackOwner": "threadkeeper"
+  }
+}

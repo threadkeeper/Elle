@@ -4,6 +4,7 @@
 //! with request timeouts and rate limits; tiny_http does not expose per-request
 //! socket deadlines. No export or restore routes are provided.
 
+use std::collections::BTreeSet;
 use std::io::Read;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -18,10 +19,62 @@ use crate::service::MemoryService;
 
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
+/// Restricts asserted bridge users to one authenticated transport actor and allow-list.
+pub struct BridgePolicy {
+    tenant_id: String,
+    actor: crate::identity::OwnerId,
+    allowed_object_ids: BTreeSet<String>,
+}
+
+impl BridgePolicy {
+    /// Validate the trusted actor and permitted private-memory user identifiers.
+    pub fn new(tenant_id: &str, actor_id: &str, user_ids: &[String]) -> Result<Self> {
+        if user_ids.is_empty() {
+            return Err(Error::Configuration("Bridge users must not be empty"));
+        }
+        let actor = crate::identity::OwnerId::new(tenant_id, actor_id)
+            .map_err(|_| Error::Configuration("Invalid bridge actor"))?;
+        let mut allowed_object_ids = BTreeSet::new();
+        for user_id in user_ids {
+            crate::identity::OwnerId::new(tenant_id, user_id)
+                .map_err(|_| Error::Configuration("Invalid bridge user"))?;
+            allowed_object_ids.insert(user_id.to_ascii_lowercase());
+        }
+        Ok(Self {
+            tenant_id: tenant_id.to_ascii_lowercase(),
+            actor,
+            allowed_object_ids,
+        })
+    }
+
+    fn owner_for(
+        &self,
+        actor: &crate::identity::OwnerId,
+        user_id: &str,
+    ) -> Result<crate::identity::OwnerId> {
+        if actor != &self.actor
+            || !self
+                .allowed_object_ids
+                .contains(&user_id.to_ascii_lowercase())
+        {
+            return Err(Error::Unauthorized);
+        }
+        crate::identity::OwnerId::new(&self.tenant_id, user_id).map_err(|_| Error::Unauthorized)
+    }
+}
+
 struct RequestContext<'a> {
     origin: &'a str,
     metadata: &'a str,
     challenge: &'a Header,
+    bridge_policy: Option<&'a BridgePolicy>,
+}
+
+struct RuntimeState {
+    verifier: EntraVerifier,
+    bridge_verifier: Option<EntraVerifier>,
+    service: MemoryService,
+    role: mcp::ServerRole,
 }
 
 /// Serve a single-owner, sequential JSON MCP endpoint until the listener fails.
@@ -31,9 +84,11 @@ struct RequestContext<'a> {
 pub fn serve(
     address: &str,
     public_origin: &str,
-    mut verifier: EntraVerifier,
-    mut service: MemoryService,
+    verifier: EntraVerifier,
+    bridge_verifier: Option<EntraVerifier>,
+    service: MemoryService,
     role: mcp::ServerRole,
+    bridge_policy: Option<BridgePolicy>,
 ) -> Result<()> {
     let origin = validate_origin(public_origin)?;
     let metadata_url = format!("{origin}/.well-known/oauth-protected-resource");
@@ -48,6 +103,12 @@ pub fn serve(
     .to_string();
     let server =
         Server::http(address).map_err(|_| Error::Transport("Cannot bind the HTTP listener"))?;
+    let mut state = RuntimeState {
+        verifier,
+        bridge_verifier,
+        service,
+        role,
+    };
     loop {
         let request = server
             .recv()
@@ -59,10 +120,9 @@ pub fn serve(
                 origin: &origin,
                 metadata: &metadata,
                 challenge: &challenge_header,
+                bridge_policy: bridge_policy.as_ref(),
             },
-            &mut verifier,
-            &mut service,
-            role,
+            &mut state,
         )
         .is_err()
         {
@@ -74,16 +134,14 @@ pub fn serve(
 fn handle_request(
     mut request: Request,
     context: &RequestContext<'_>,
-    verifier: &mut EntraVerifier,
-    service: &mut MemoryService,
-    role: mcp::ServerRole,
+    state: &mut RuntimeState,
 ) -> Result<()> {
     let request_id = REQUEST_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let method = format!("{:?}", request.method());
     let path = request.url().split('?').next().unwrap_or("").to_owned();
     eprintln!(
         "Elle diagnostic: request_id={request_id} role={} method={method} path={path} event=request_started",
-        role.name()
+        state.role.name()
     );
     match single_header(&request, "Origin") {
         Ok(None) => {}
@@ -91,21 +149,13 @@ fn handle_request(
         _ => {
             eprintln!(
                 "Elle diagnostic: request_id={request_id} role={} status=403 error=forbidden_origin",
-                role.name()
+                state.role.name()
             );
             return reply(request, 403, r#"{"error":"Forbidden origin"}"#, None);
         }
     }
     if request.method() == &Method::Post && path.starts_with("/bridge/") {
-        return handle_bridge(
-            request,
-            request_id,
-            &path,
-            context.challenge,
-            verifier,
-            service,
-            role,
-        );
+        return handle_bridge(request, request_id, &path, context, state);
     }
     match (request.method(), path.as_str()) {
         (&Method::Get, "/healthz") => {
@@ -126,12 +176,12 @@ fn handle_request(
         _ => return reply(request, 404, r#"{"error":"Not found"}"#, None),
     }
 
-    let owner = match authenticate(&request, verifier) {
+    let owner = match authenticate(&request, &mut state.verifier) {
         Ok(owner) => owner,
         Err(error) => {
             eprintln!(
                 "Elle diagnostic: request_id={request_id} role={} status=401 error={error}",
-                role.name(),
+                state.role.name(),
             );
             return reply(
                 request,
@@ -146,12 +196,12 @@ fn handle_request(
         Err((status, message)) => return reply(request, status, message, None),
     };
     let (rpc_method, tool_name) = request_summary(&body);
-    match mcp::handle_for_role(&body, &owner, service, role) {
+    match mcp::handle_for_role(&body, &owner, &mut state.service, state.role) {
         Some(response) => {
             let error = response_error(&response);
             eprintln!(
                 "Elle diagnostic: request_id={request_id} role={} rpc_method={} tool={} status=200 result={}{}",
-                role.name(),
+                state.role.name(),
                 rpc_method,
                 tool_name,
                 if error.is_some() { "error" } else { "ok" },
@@ -164,7 +214,7 @@ fn handle_request(
         None => {
             eprintln!(
                 "Elle diagnostic: request_id={request_id} role={} rpc_method={} tool={} status=202 result=notification_accepted",
-                role.name(),
+                state.role.name(),
                 rpc_method,
                 tool_name
             );
@@ -177,33 +227,16 @@ fn handle_bridge(
     mut request: Request,
     request_id: u64,
     path: &str,
-    challenge: &Header,
-    verifier: &mut EntraVerifier,
-    service: &mut MemoryService,
-    role: mcp::ServerRole,
+    context: &RequestContext<'_>,
+    state: &mut RuntimeState,
 ) -> Result<()> {
-    let owner = match authenticate(&request, verifier) {
-        Ok(owner) => owner,
-        Err(error) => {
-            eprintln!(
-                "Elle diagnostic: request_id={request_id} role={} status=401 error={error}",
-                role.name(),
-            );
-            return reply(
-                request,
-                401,
-                r#"{"error":"Unauthorized"}"#,
-                Some(challenge.clone()),
-            );
-        }
-    };
     let body = match read_json_body(&mut request) {
         Ok(body) => body,
         Err((status, message)) => return reply(request, status, message, None),
     };
     let tool_name = path.strip_prefix("/bridge/").unwrap_or("");
-    let arguments: Value = match serde_json::from_slice(&body) {
-        Ok(Value::Object(arguments)) => Value::Object(arguments),
+    let mut arguments = match serde_json::from_slice(&body) {
+        Ok(Value::Object(arguments)) => arguments,
         _ => {
             return reply(
                 request,
@@ -213,11 +246,33 @@ fn handle_bridge(
             )
         }
     };
-    match mcp::invoke_for_role(tool_name, arguments, &owner, service, role) {
+    let owner = match authenticate_bridge(
+        &request,
+        &mut arguments,
+        &mut state.verifier,
+        state.bridge_verifier.as_mut(),
+        context.bridge_policy,
+    ) {
+        Ok(owner) => owner,
+        Err(error) => {
+            eprintln!(
+                "Elle diagnostic: request_id={request_id} role={} status=401 error={error}",
+                state.role.name(),
+            );
+            return reply(
+                request,
+                401,
+                r#"{"error":"Unauthorized"}"#,
+                Some(context.challenge.clone()),
+            );
+        }
+    };
+    let arguments = Value::Object(arguments);
+    match mcp::invoke_for_role(tool_name, arguments, &owner, &mut state.service, state.role) {
         Ok(value) => {
             eprintln!(
                 "Elle diagnostic: request_id={request_id} role={} bridge_tool={} status=200 result=ok",
-                role.name(),
+                state.role.name(),
                 log_value(tool_name)
             );
             reply(request, 200, &value.to_string(), None)
@@ -225,7 +280,7 @@ fn handle_bridge(
         Err(error) => {
             eprintln!(
                 "Elle diagnostic: request_id={request_id} role={} bridge_tool={} status=400 result=error detail={}",
-                role.name(),
+                state.role.name(),
                 log_value(tool_name),
                 log_value(&error.to_string())
             );
@@ -237,6 +292,32 @@ fn handle_bridge(
             )
         }
     }
+}
+
+fn authenticate_bridge(
+    request: &Request,
+    arguments: &mut serde_json::Map<String, Value>,
+    verifier: &mut EntraVerifier,
+    bridge_verifier: Option<&mut EntraVerifier>,
+    policy: Option<&BridgePolicy>,
+) -> std::result::Result<crate::identity::OwnerId, &'static str> {
+    let value = single_header(request, "Authorization")
+        .map_err(|_| "duplicate_authorization")?
+        .ok_or("missing_authorization")?;
+    let token = bearer(value).ok_or("malformed_bearer")?;
+    let user_id = match arguments.remove("user_object_id") {
+        Some(Value::String(user_id)) if !user_id.is_empty() => user_id,
+        Some(_) => return Err("malformed_user_assertion"),
+        None => return verifier.verify(token).map_err(|_| "token_rejected"),
+    };
+    let actor = bridge_verifier
+        .ok_or("bridge_verifier_missing")?
+        .verify(token)
+        .map_err(|_| "token_rejected")?;
+    policy
+        .ok_or("bridge_policy_missing")?
+        .owner_for(&actor, &user_id)
+        .map_err(|_| "user_assertion_rejected")
 }
 
 fn authenticate(
@@ -498,5 +579,43 @@ mod tests {
         assert_eq!(bearer("Basic a.b.c"), None);
         assert_eq!(bearer("Bearer a.b.c extra"), None);
         assert_eq!(bearer("Bearer "), None);
+    }
+
+    #[test]
+    fn bridge_policy_accepts_only_the_trusted_actor_and_allowed_user() {
+        let tenant = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+        let actor_id = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+        let user_id = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+        let policy = BridgePolicy::new(tenant, actor_id, &[user_id.to_owned()]).unwrap();
+        let actor = crate::identity::OwnerId::new(tenant, actor_id).unwrap();
+        let owner = policy.owner_for(&actor, user_id).unwrap();
+        assert_eq!(owner.as_str(), format!("{tenant}:{user_id}"));
+        let wrong_actor =
+            crate::identity::OwnerId::new(tenant, "dddddddd-dddd-dddd-dddd-dddddddddddd").unwrap();
+        assert!(policy.owner_for(&wrong_actor, user_id).is_err());
+        assert!(policy
+            .owner_for(&actor, "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
+            .is_err());
+    }
+
+    #[test]
+    fn bridge_user_assertion_is_removed_before_tool_invocation() {
+        let mut arguments = serde_json::Map::from_iter([
+            (
+                "user_object_id".to_owned(),
+                Value::String("cccccccc-cccc-cccc-cccc-cccccccccccc".to_owned()),
+            ),
+            ("query".to_owned(), Value::String("project".to_owned())),
+        ]);
+        let assertion = match arguments.remove("user_object_id") {
+            Some(Value::String(user_id)) => user_id,
+            _ => panic!("missing test assertion"),
+        };
+        assert_eq!(assertion, "cccccccc-cccc-cccc-cccc-cccccccccccc");
+        assert_eq!(
+            arguments.get("query"),
+            Some(&Value::String("project".to_owned()))
+        );
+        assert!(!arguments.contains_key("user_object_id"));
     }
 }

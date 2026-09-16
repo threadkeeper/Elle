@@ -105,13 +105,41 @@ fn run() -> Result<()> {
             println!("Synthetic demo data seeded.");
             return Ok(());
         }
+        let users = if role == mcp::ServerRole::Private {
+            Some(allowed_users()?)
+        } else {
+            None
+        };
+        let bridge_actor = env::var("ELLE_BRIDGE_ACTOR_ID").ok();
         let verifier = match role {
             mcp::ServerRole::Private => {
-                EntraVerifier::for_users(&tenant, &audience, &allowed_users()?)?
+                EntraVerifier::for_users(&tenant, &audience, users.as_deref().unwrap_or_default())?
             }
             mcp::ServerRole::SharedWisdom => EntraVerifier::for_tenant_users(&tenant, &audience)?,
         };
-        return elle::server::serve("0.0.0.0:8080", &origin, verifier, service, role);
+        let bridge_verifier = match (role, bridge_actor.as_deref()) {
+            (mcp::ServerRole::Private, Some(actor)) => {
+                Some(EntraVerifier::new(&tenant, &audience, actor)?)
+            }
+            _ => None,
+        };
+        let bridge_policy = match (role, bridge_actor) {
+            (mcp::ServerRole::Private, Some(actor)) => Some(elle::server::BridgePolicy::new(
+                &tenant,
+                &actor,
+                users.as_deref().unwrap_or_default(),
+            )?),
+            _ => None,
+        };
+        return elle::server::serve(
+            "0.0.0.0:8080",
+            &origin,
+            verifier,
+            bridge_verifier,
+            service,
+            role,
+            bridge_policy,
+        );
     }
 
     #[derive(Deserialize)]
