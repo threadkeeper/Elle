@@ -47,6 +47,7 @@ def package_source() -> tuple[bytes, str]:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.write(SOURCE / "main.py", "main.py")
+        archive.write(SOURCE / "request_scoped_tools.py", "request_scoped_tools.py")
         archive.write(SOURCE / "requirements.txt", "requirements.txt")
         archive.writestr("instructions.txt", prompt_text())
     payload = buffer.getvalue()

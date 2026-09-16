@@ -119,8 +119,15 @@ class DeploymentTests(unittest.TestCase):
         payload, digest = deploy.package_source()
         self.assertEqual(len(digest), 64)
         with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-            self.assertIn("main.py", archive.namelist())
-            self.assertIn("requirements.txt", archive.namelist())
+            self.assertEqual(
+                archive.namelist(),
+                [
+                    "main.py",
+                    "request_scoped_tools.py",
+                    "requirements.txt",
+                    "instructions.txt",
+                ],
+            )
             prompt = archive.read("instructions.txt").decode("utf-8")
             self.assertTrue(prompt.startswith("You are Elle."))
 

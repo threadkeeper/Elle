@@ -403,9 +403,9 @@ released` separately so a local PASS cannot silently become a deployed claim.
 
 | Package | Status / current lease | Commit / evidence | Next gate |
 | --- | --- | --- | --- |
-| A | Local-ready; transport candidate accepted, no deployment | Diff `141a1e67704241f11855aa134dec3352d3fa817c`; tester 49/49 + fmt/clippy PASS; reviewer PASS | Prepare deployment preview; then authorized toolbox-v4 discovery must confirm the first POST and live transport |
-| B | Planned; no invocation | Existing global toolbox lifetime not accepted | Reproduce and fix current-request context |
-| C | Planned; no invocation | OAuth/discovery tooling 3202e6d; consent progressed | Private read/write/isolation after transport fix |
+| A | Staged; Private transport deployed, not yet released | Commit `62a587f`; Private revision `0000013`; health/auth guards PASS; toolbox v4 progressed from HTTP 405 to delegated authorization | Complete allowlisted-presenter discovery and Private tool smoke test |
+| B | Local-ready for single-presenter demo; multi-user onboarding deferred | Request-scoped toolbox candidate; full tester gate PASS; scoped tester/reviewer DEMO-PASS | Commit/push, stage a new agent version on toolbox v4, and keep agent v3 as rollback |
+| C | Blocked on presenter identity, not transport | Toolbox v4 preserves four baseline sources; current administrator is outside the Private allowlist and correctly receives HTTP 401 | Sign in with an allowlisted DemoUser, authorize that same user, then rerun discovery and synthetic cleanup test |
 | D | Planned; no invocation | Existing service/catalog, not attached live | Separate OAuth and Wisdom acceptance |
 | E | Planned; no invocation | Existing excluded connection, not accepted | Confirm supported Work IQ contract/auth |
 | F | Planned; no invocation | Published icons 0b1b471, app 1.0.2 | Native-size candidates and user selection |

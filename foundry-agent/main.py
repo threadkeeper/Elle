@@ -2,10 +2,11 @@ import asyncio
 import os
 from pathlib import Path
 
-from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
 from agent_framework_foundry_hosting import FoundryToolbox, ResponsesHostServer
 from azure.identity import DefaultAzureCredential
+
+from request_scoped_tools import RequestScopedToolboxAgent
 
 
 def load_instructions() -> str:
@@ -28,17 +29,16 @@ async def main() -> None:
         exclude_visual_studio_code_credential=True,
     )
 
-    toolbox = FoundryToolbox(credential, url=toolbox_url)
     client = FoundryChatClient(
         project_endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
         model=model,
         credential=credential,
     )
-    agent = Agent(
+    agent = RequestScopedToolboxAgent(
         name=os.environ.get("FOUNDRY_AGENT_NAME", "elle"),
         client=client,
         instructions=load_instructions(),
-        tools=toolbox,
+        toolbox_factory=lambda: FoundryToolbox(credential, url=toolbox_url),
         default_options={"store": False},
     )
 

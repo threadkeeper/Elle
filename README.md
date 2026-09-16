@@ -166,9 +166,34 @@ The first milestone is a small, single-user demonstration, not a production-read
 
 ### Foundry deployment gates
 
-The hosted runtime is in `foundry-agent`. Use separate Python environments for
-`requirements.txt` (runtime) and `requirements-deploy.txt` (deployment); their
-Foundry SDK version requirements differ.
+The hosted runtime is in `foundry-agent`. Its Agent Framework versions are
+intentionally pinned because the request-context lifecycle is part of the
+isolation contract and an open upstream stale-context bug affects long-lived
+toolbox instances. The runtime pins Agent Framework core 1.17.0, Foundry 1.12.0,
+Foundry hosting 1.0.0b260903, and Azure Identity 1.25.3.
+
+Use separate Python environments for `requirements.txt` (runtime) and
+`requirements-deploy.txt` (deployment). Never install both files into one
+environment: their Foundry SDK and Azure Identity versions intentionally differ.
+On Windows PowerShell, create and test the Python 3.13 hosted-runtime environment
+with:
+
+```powershell
+py -3.13 -m venv .local/runtime-b
+& .\.local\runtime-b\Scripts\python.exe -m pip install -r foundry-agent/requirements.txt
+& .\.local\runtime-b\Scripts\python.exe -m unittest discover -s foundry-agent -p "test_runtime_*.py"
+```
+
+Create the deployment environment separately. It uses Azure AI Projects 2.6.1
+and Azure Identity 1.25.1 from `requirements-deploy.txt`:
+
+```powershell
+py -3.13 -m venv .local/deploy-b
+& .\.local\deploy-b\Scripts\python.exe -m pip install -r foundry-agent/requirements-deploy.txt
+& .\.local\deploy-b\Scripts\python.exe -m unittest discover -s foundry-agent -p "test_deploy.py"
+& .\.local\deploy-b\Scripts\python.exe -m unittest discover -s foundry-agent -p "test_private_oauth.py"
+& .\.local\deploy-b\Scripts\python.exe -m unittest discover -s foundry-agent -p "test_probe_toolbox.py"
+```
 
 `deploy.py` stages a candidate without changing live traffic or the default
 toolbox. `--add-mcp NAME=CONNECTION` adds a source to the current default toolbox
@@ -176,10 +201,9 @@ without dropping existing sources. Add `--base-toolbox-version VERSION` when
 restoring the next capability on top of a previously tested candidate. Use
 `--toolbox-version VERSION` to deploy against an unchanged existing toolbox.
 
-Run deployment tests with `python -m unittest discover -s foundry-agent -p
-"test_deploy.py"`. `deploy.py --test-version VERSION` invokes an explicitly
-version-pinned diagnostic session rather than the live traffic selector.
-This smoke check does not replace delegated-user and channel acceptance tests.
+`deploy.py --test-version VERSION` invokes an explicitly version-pinned
+diagnostic session rather than the live traffic selector. This smoke check does
+not replace delegated-user and channel acceptance tests.
 
 Only after acceptance, run `deploy.py --promote-version VERSION
 --expected-live-version CURRENT`. Promotion preserves the existing Activity
