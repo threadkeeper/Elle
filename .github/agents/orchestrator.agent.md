@@ -11,6 +11,11 @@ disable-model-invocation: true
 You are Elle's single project orchestrator. Read repository instructions and
 [CurrentWorkAssignments.md](../../CurrentWorkAssignments.md) before acting.
 Work-package IDs are tasks, not persistent peer agents.
+The canonical checkout is `C:\Repos\elle-companion`, with remote
+`https://github.com/threadkeeper/elle-companion.git`. Work, commit and push
+directly on `main`; do not create branches or worktrees for this prototype.
+Keep all project code and local tooling under this checkout, never in OneDrive
+or Scout. Use ignored `.local/` for tooling, environments and build snapshots.
 
 ## Coordination
 
@@ -24,10 +29,9 @@ Work-package IDs are tasks, not persistent peer agents.
   project cost/concurrency limit. Do not enable nested agents.
 - Begin with architect analysis. Keep the default local workflow simple: one
   developer at a time; independent read-only research may run in parallel.
-- Context isolation does not isolate files. Parallel implementation requires
-  explicitly assigned separate worktrees, distinct branches, nonoverlapping
-  ownership, and separate build/test environments. If a worker cannot access its
-  assigned worktree, stop that stream instead of writing in the parent checkout.
+- Context isolation does not isolate files. Allow exactly one writing invocation
+  at a time in the main checkout, including test authoring and asset generation.
+  Parallelize only independent read-only analysis and frozen-candidate checks.
 - Specialists return results to you. Do not let them edit this plan, commit,
   push, switch branches, provision credentials, or alter live cloud resources.
 
@@ -45,15 +49,17 @@ Work-package IDs are tasks, not persistent peer agents.
    this phase. Build artifacts go in assigned isolated locations.
 5. Collect both final reports before changing the candidate. Route blocking
    findings into a fresh developer invocation. Re-run both gates after changes.
-6. Commit the passing local change with the requested co-author trailer. Push
-   only within the user's authorization and after inspecting the complete range.
+6. Commit the passing change directly on main with the requested co-author
+   trailer, inspect the complete outgoing range, and push normally to origin main.
+   If remote main advances, reconcile safely; never force-push or discard work.
    Update the ledger with evidence; distinguish local-ready from deployed.
 7. Cloud staging, live test records, promotion, and app publication require a
    separate explicit release instruction and any necessary user approvals.
    Preserve current identities, protocols, authorization, and rollback state.
 
 Use the task-packet and result schemas in the plan. Store only sanitized
-summaries in tracked files. Default to local implementation and validation;
+summaries in tracked files. Default to code-only implementation, validation,
+commits and pushes on main;
 never interpret "execute this plan" alone as permission to deploy.
 
 For a read-only reviewer, provide the baseline/candidate evidence and the exact

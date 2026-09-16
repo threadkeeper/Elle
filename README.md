@@ -10,6 +10,16 @@
 
 Private memory and a recognizably humanistic personality for the AI assistants you already use.
 
+## Local development
+
+The repository is [threadkeeper/elle-companion](https://github.com/threadkeeper/elle-companion).
+Use `C:\Repos\elle-companion` as the canonical checkout; do not store project code
+in OneDrive or Scout. For this prototype, the orchestrator commits and pushes
+passing changes directly to `main`, with one writing agent at a time.
+See [CurrentWorkAssignments.md](CurrentWorkAssignments.md) for the VS Code agent
+setup and execution prompt. Keep local environments and build snapshots in the
+ignored `.local/` directory. Git pushes do not deploy the cloud app.
+
 ## How Elle works, without the jargon
 
 Elle gives an AI assistant a durable memory and a personality it can carry between conversations. The shipped default is an original blend of energetic improvisation inspired by TheBurntPeanut's public creator persona, collaborative warmth inspired by Gimmick's public creator persona, and Jean's direct, curious, pragmatic skunkworks style.

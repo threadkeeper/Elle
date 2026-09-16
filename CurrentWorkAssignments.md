@@ -1,12 +1,31 @@
 # Current Work Assignments
 
-Updated: 2026-09-16, 20:36 SAST. This is a point-in-time handoff, not a live deployment inventory.
+Updated: 2026-09-16, 20:51 SAST. This is a point-in-time handoff, not a live deployment inventory.
+
+## Repository and working location
+
+- Canonical checkout: **`C:\Repos\elle-companion`**.
+- GitHub remote: **`https://github.com/threadkeeper/elle-companion.git`**.
+- Work, commit, and push directly to **`main`** for this prototype. Do not create
+  feature branches or extra worktrees.
+- Keep project source, scripts, build snapshots and dependency environments
+  under this checkout, using ignored `.local/` for local-only tooling. Do not
+  create project code copies in OneDrive or Scout directories.
+- The orchestrator owns Git and allows only one writing invocation at a time.
+  Independent read-only analysis and frozen-candidate validation may run in parallel.
+- Migration archives under `.local/migration/` preserve earlier local work; they
+  are not active checkouts and must not be indexed or used as agent working roots.
+  Recreate relocated virtual environments at their intended `.local/` path when
+  needed; virtual environments are not reliably relocatable.
+
+The GitHub repository rename does not rename Elle's existing Azure services,
+Foundry agent, toolbox, or Microsoft 365 app identity.
 
 ## Objective and priority
 
 Restore Elle's real Private memory/personality, Shared Wisdom, and Microsoft 365 capabilities in the published agent. Release each capability as soon as its own acceptance gates pass. Improve the elephant icon's small-size legibility independently. Do not wait for specialist tools or artwork to ship working Private tools.
 
-The user requested incremental commits and testing, and then paused deployment to refine the local execution plan. Start in **local-only mode**. Do not resume cloud writes or promote tools without a separate release instruction.
+The user requested incremental commits and testing directly on main. Start in **code-only mode**: implement, validate, commit and push repository changes. Deployment is separate; do not resume cloud writes or promote tools without a release instruction.
 
 ## Operating model: one parent, four reusable specialists
 
@@ -22,7 +41,7 @@ You
     reviewer        -> read-only -----+-> parent integrates results
 ```
 
-The final tester and reviewer invocations may run in parallel only after writes stop. Corrections go through a fresh developer invocation, followed by new validation/review. Context-isolated subagents share neither conversational history nor a persistent peer-to-peer channel; filesystem isolation must be established separately.
+The final tester and reviewer invocations may run in parallel only after writes stop. Corrections go through a fresh developer invocation, followed by new validation/review. Context-isolated subagents do not share conversational history, but they do share this checkout; serialize all writing phases.
 
 The ready-to-use profiles are:
 
@@ -59,14 +78,14 @@ There are **four tool sources**, not necessarily four individual callable tools.
 
 ## Ownership and concurrency rules
 
-1. Default to one implementation stream in one local feature branch. Sequential architect/developer/tester calls do not each need a worktree. Only the orchestrator operates Git.
-2. For genuinely independent parallel implementations, the orchestrator creates separate worktrees and branches such as `swarm/transport` and `swarm/runtime`. It passes each absolute checkout path and baseline explicitly. Never share an index, dependency environment, build cache, or mutable authentication cache between streams. Separate context alone is not isolation.
+1. Use the canonical checkout on `main`. Do not create feature branches, extra worktrees, or parallel writing sessions. Only the orchestrator operates Git.
+2. Allow one writer at a time, including test authoring and generated-source updates. Parallelize only independent read-only analysis or validation of the same frozen candidate. Use separate artifact directories for parallel commands; never share mutable authentication state.
 3. The parent (`project-orchestrator`, release responsibility **R**) is the only writer of this assignment ledger and the only actor allowed to integrate/commit/push or perform separately authorized live releases. It leases exact source files to one developer invocation, then explicitly transfers test-file ownership to the tester when required. Shared-file edits are serialized.
 4. Specialists return a result to the parent. A follow-up is a **new invocation** with the relevant previous result included; do not rely on peer messages, an inherited chat, or an unrecorded claim. Missing information is a BLOCKED report for the parent to resolve.
 5. The parent coordinates interactive sign-in and the shared browser using C's acceptance requirements. Specialists must not navigate another session away or change the operator's account. Use isolated per-user CLI caches and verify the exact account before every live test.
 6. No shared-user tokens, model-supplied user IDs as authorization, app-only private-memory shortcuts, disabled token validation, broadened user allowlists, or secrets in source/logs. Derive memory ownership from validated delegated identity.
 7. Use only synthetic acceptance records; do not dump private memories, conversations, tokens, or consent URLs into commits or this public repository. Clean up only records created by the test.
-8. Commit focused, passing steps. Do not force-push, reset others' work, mass-delete caches, or redeploy both backends merely because the existing deployment script does so.
+8. Commit focused, passing steps and push normally to `origin main`. Inspect the exact outgoing range and exclude unrelated changes, credentials and local archives. If remote main advances, stop and reconcile safely; never force-push or reset others' work.
 9. Re-read live versions before every approved cloud change. Record the previous image/version and rollback command. R must preserve unrelated metadata, permissions, channels, and installed app identity.
 10. User-visible publication, outbound messages, permission expansion, and new artwork require an exact preview and explicit user approval. The previous artwork approval does not approve a redesigned icon.
 
@@ -77,11 +96,11 @@ The parent schedules these packages using the same four specialist roles, rather
 | Package | Priority / start | Exclusive implementation scope | Dependencies for completion |
 | --- | --- | --- | --- |
 | **A - MCP transport** | P0; architect first, then developer | `rust/src/server.rs`, `rust/src/mcp.rs`, `rust/tests/memory_flow.rs`, new transport tests under `rust/tests/` | Diagnostic image already deployed; obtain redacted first-POST evidence. No dependency on B to diagnose. |
-| **B - Hosted request isolation** | P0; parallel analysis; edits only in an isolated stream | `foundry-agent/main.py`, `foundry-agent/requirements.txt`, new `request_scoped_tools.py` and `test_runtime_*.py` | Independent local reproduction; C defines identity acceptance requirements, the parent coordinates sign-in; R packages new runtime modules. |
+| **B - Hosted request isolation** | P0; parallel analysis; serialized implementation | `foundry-agent/main.py`, `foundry-agent/requirements.txt`, new `request_scoped_tools.py` and `test_runtime_*.py` | Independent local reproduction; C defines identity acceptance requirements, the parent coordinates sign-in; R packages new runtime modules. |
 | **C - Private OAuth and acceptance** | P0; read-only design alongside A/B; serialize shared edits | `configure_private_oauth.py`, `probe_toolbox.py`, their tests, new `private_acceptance.py` and `test_private_acceptance.py`, all under `foundry-agent/` | Direct end-to-end Private gate needs A; hosted/multi-user gate needs A+B+R candidate. |
 | **D - Shared Wisdom** | P1; prepare now | New `foundry-agent/configure_wisdom_oauth.py`, `wisdom_acceptance.py`, and `test_wisdom_*.py` | Agreed OAuth helper contract with C; live transport gate needs A; hosted gate needs B; promotion follows Private. |
 | **E - Work IQ** | P1; prepare now | New `foundry-agent/configure_workiq.py`, `workiq_acceptance.py`, and `test_workiq_*.py` | B for hosted user context; C for browser/sign-in coordination. Direct service diagnosis is independent of A/D. |
-| **F - Small-size branding** | P1; independent stream when capacity permits | New candidates under `docs/images/elle-app-legible-*`; preview/export script under `scripts/` | User selects the artwork; R publishes it. No dependency on tool repairs. |
+| **F - Small-size branding** | P1; independent design; serialized asset writes | New candidates under `docs/images/elle-app-legible-*`; preview/export script under `scripts/` | User selects the artwork; R publishes it. No dependency on tool repairs. |
 | **G-SQL - SQL capability** | P2; discovery now | New isolated `integrations/sql/` implementation/tests | Exact approved database/entity scope and auth design; R integrates only after acceptance. |
 | **G-Speech - Speech capability** | P2; discovery now | New isolated `integrations/speech/` implementation/tests | Confirm actual supported server, storage/auth requirements, cost and network constraints; R integrates later. |
 | **G-Chart - Flint capability** | P2; discovery now | New isolated `integrations/chart/` implementation/tests | Confirm existing endpoint/deployment; safe image-return and authentication contract; R integrates later. |
@@ -95,8 +114,8 @@ The register's abbreviated file names refer to `foundry-agent/` unless a full re
 | --- | --- |
 | B's architecture research and A's implementation | B reads the frozen baseline, not A's moving diff; no overlapping writes. |
 | Tester `validate-only` and reviewer | All candidate writes finished; both receive the same baseline, exact diff and candidate identity. Reviewer is read-only; test commands must not update tracked files. |
-| A and B implementations | Optional only: separate worktrees, disjoint file leases, separate environments, and agreed interfaces. R serializes packaging/CI integration afterward. |
-| F icon preparation and tool work | Separate worktree for parallel editing; no canonical asset replacement or publication before user selection. |
+| A and B analysis | Read-only scopes and an agreed baseline; their implementation phases must run sequentially on main. |
+| F icon design analysis and tool work | Read-only design can overlap; image generation, asset replacement and source edits use the single writer slot. Publication still needs user selection. |
 | D/E/G discovery | Bounded read-only invocations as capacity permits; no broad initial ten-agent fan-out. |
 
 Do not run test authoring while final review reads those files. Either finish authoring before freezing the candidate, or have the reviewer inspect a separate immutable snapshot and require another review after integrating new tests.
@@ -116,7 +135,7 @@ Exclusive write scope (or NONE):
 Approved design and interface contracts:
 Relevant prior results and unresolved questions:
 Dependencies satisfied / still blocked:
-Constraints, including local-only or explicitly approved live-read scope:
+Constraints, including code-only or explicitly approved live-read scope:
 Commands/acceptance cases and isolated environment paths:
 Expected output and stop conditions:
 ```
@@ -206,7 +225,7 @@ Deliver the supported tool inventory, the exact remaining gaps against the inten
 
 ## F - Make the elephant recognizable at app-icon size
 
-Use the committed `docs/images/elle-m365-color-192.png` and `elle-m365-outline-32.png` as the portable starting assets. Higher-resolution local drafts may exist on the operator's machine but are not guaranteed to be in a fresh clone.
+Use the committed `docs/images/elle-m365-color-192.png` and `elle-m365-outline-32.png` as the published baseline. Higher-resolution `elle-baby-elephant-icon-*` assets and both `elle-baby-elephant-foundry-v*` drafts are also committed for redesign work. They are source assets, not a new app-icon selection or publication.
 
 Keep the approved baby-elephant identity and palette. Produce a tighter head/ears/trunk composition, reduce outer whitespace and decorative detail, and improve silhouette/contrast. Changing PNG resolution alone will not enlarge the host application's 20-32px icon slot.
 
@@ -237,12 +256,12 @@ F icon candidates ---------> user selection ----------------> R icon publication
 G specialist discovery ---> approved scope + acceptance ----> later independent releases
 ```
 
-Start with an architect pass over A+B+C and one developer implementing A. Run independent B/C analysis while A is implemented when useful; do not split a small review into redundant agents. Add a second implementation worktree only after the parent establishes a real independent boundary. Work IQ preparation does not require waiting for Wisdom. F and G remain optional parallel tracks, not prerequisites for restoring Private.
+Start with an architect pass over A+B+C and one developer implementing A. Run independent B/C read-only analysis while A is implemented when useful; do not split a small review into redundant agents. All implementation phases run sequentially in the same main checkout. Work IQ preparation does not require waiting for Wisdom. F and G analysis can proceed independently but does not block Private.
 
 For **every** package: design -> controlled implementation -> exclusive test authoring if needed -> freeze -> parallel validate-only testing and independent review -> collect both -> focused correction/new invocation -> repeat both gates -> parent commit. Stage and promote only after a separate release instruction; the graph above is the eventual release dependency graph, not automatic authorization.
 
 1. Re-read live routing, toolbox defaults, backend images, and pending build runs. Preserve the known-good v3 rollback. Diagnostic backends and hosted v4 now exist; do not recreate or promote them merely because the earlier handoff said they were absent.
-2. Merge A/B/C passing commits. Reconcile runtime/deployment SDK constraints using separate environments, include new modules in the hosted ZIP, and update the corresponding CI jobs. Current deployment SDK is pinned to 2.6.1; the previously resolved runtime required a different projects SDK range. Do not install both requirement sets into one environment.
+2. Commit and push A/B/C passing changes incrementally on main. Reconcile runtime/deployment SDK constraints using separate `.local/` environments, include new modules in the hosted ZIP, and update the corresponding CI jobs. Current deployment SDK is pinned to 2.6.1; the previously resolved runtime required a different projects SDK range. Do not install both requirement sets into one environment.
 3. Stage an explicit Private-only candidate preserving all four healthy sources. Use toolbox v4 only if it still contains the intended connection/configuration. Never route consumers to an untested newest version.
 4. Pass direct Private, hosted sequential/concurrent user-isolation, and actual Teams/Copilot channel tests. A CLI smoke response does not prove channel identity propagation. The frozen candidate must also have independent tester and reviewer reports; any subsequent edit invalidates the affected acceptance evidence.
 5. Promote Private and verify real tool calls plus a fresh consumer conversation. If its gate fails, do not promote; report the exact blocker. On regression, route back to the captured previous version.
@@ -254,7 +273,7 @@ For **every** package: design -> controlled implementation -> exclusive test aut
 
 Reference commands from the repository root using the appropriate environment's
 Python. The probe needs approved live-read access; staging and promotion are
-cloud writes and must not run during the local-only task:
+cloud writes and must not run during the code-only task:
 
 ```powershell
 python -m unittest discover -s foundry-agent -p "test_*.py"
@@ -268,15 +287,15 @@ The angle-bracket values above are placeholders, not literal arguments. `probe_t
 
 For additional sources, use `--add-mcp NAME=CONNECTION --base-toolbox-version VERSION` with values returned from discovery. The current CLI only adds MCP sources; a Work IQ A2A source requires a deliberate, tested extension by R. Promoting an agent does not automatically promote the toolbox default. Keep the agent's explicit toolbox pin authoritative and coordinate any default change.
 
-Use existing Rust tests (`cargo test --locked` with targeted selectors), formatting, and Clippy for changed Rust behavior. Windows builds require the installed Visual C++ environment in the same shell invocation. Build a clean committed source snapshot for ACR rather than scanning a synced working tree containing large caches.
+Use existing Rust tests (`cargo test --locked` with targeted selectors), formatting, and Clippy for changed Rust behavior. Windows builds require the installed Visual C++ environment in the same shell invocation. Build a clean committed source snapshot under `.local/` for ACR rather than scanning the entire checkout and its caches.
 
 ### Known pitfalls and work to preserve
 
 - The diagnostic image build and hosted-v4 staging completed despite interrupted initiating calls. Both backends now have the diagnostic image; v4 still references the healthy toolbox 3. Inspect existing resources before repeating operations.
-- Ignored local Python environments disappeared during this session. Do not rely on operator-specific `.local` paths; restore missing dependencies in an isolated environment outside the synced tree.
+- Earlier environments disappeared or were relocated during migration. Restore missing dependencies in separate environments under `C:\Repos\elle-companion\.local`; do not reuse archived virtual environments or old OneDrive/Scout paths.
 - `scripts/deploy.ps1` currently updates **both** backends. R must provide a deliberate single-service deployment path for the requested incremental rollout.
 - Keep the current Private API's authentication and user isolation intact. GET 405 by itself is not proof that an MCP server needs SSE.
-- Leave the operator's unrelated Power Platform connector-title edit and alternative icon drafts untouched.
+- Preserve the Private Identity Bridge connector title and the archived/icon source assets during subsequent tool repairs; do not replace published icons without user selection.
 - This GitHub repository is currently **public**. Do not paste operator-specific account details, tenant/resource identifiers, endpoint inventories, tokens, private chat excerpts, or acceptance-result payloads into this file.
 
 ## Run locally after pulling
@@ -287,9 +306,10 @@ Update to a current VS Code build supporting custom subagents, with GitHub
 Copilot/Copilot Chat enabled and signed in. Honor organization policy and normal
 tool approval prompts; do not enable blanket terminal approval.
 
-In PowerShell, from your existing Elle repository:
+In PowerShell:
 
 ```powershell
+Set-Location 'C:\Repos\elle-companion'
 $pending = git status --porcelain
 if ($LASTEXITCODE -ne 0) { throw 'Open a valid Elle Git checkout first' }
 if ($pending) { throw 'Preserve local changes before proceeding; do not reset or auto-stash' }
@@ -297,15 +317,14 @@ git switch main
 if ($LASTEXITCODE -ne 0) { throw 'Cannot switch to main safely' }
 git pull --ff-only origin main
 if ($LASTEXITCODE -ne 0) { throw 'Resolve the pull without overwriting local work' }
-git switch -c work/elle-local-restoration
-if ($LASTEXITCODE -ne 0) { throw 'Choose an unused feature branch name' }
 code .
 ```
 
-If you have no checkout, use `git clone https://github.com/threadkeeper/Elle.git`
-first, then `Set-Location .\Elle` and create the feature branch. Keep Python/build
-environments outside a synced checkout. The parent should run the chosen existing
-test command and restore its requirement set only if dependencies are missing.
+For a new machine with no checkout, use
+`git clone https://github.com/threadkeeper/elle-companion.git C:\Repos\elle-companion`.
+Do not clone over an existing directory. Keep Python/build environments under
+the checkout's ignored `.local/` directory. Run the chosen existing test command
+and restore its requirement set only if dependencies are missing.
 
 ### 2. Enable the orchestrator
 
@@ -332,49 +351,47 @@ parallel delegation happened. No model override is required.
 ### 3. Send this first task
 
 ```text
-Read CurrentWorkAssignments.md and repository instructions. Operate in local-only
-mode on my current feature branch. Use architect to assess packages A, B and C,
+Read CurrentWorkAssignments.md and repository instructions. Work in
+C:\Repos\elle-companion directly on main in code-only mode.
+Use architect to assess packages A, B and C,
 then give developer one bounded transport repair (A) with regression coverage.
 Include the exact checkout, file leases, design, dependencies and previous
 conclusions in every stateless delegation. Run independent B/C analysis in
 parallel only when useful. If tester needs to author tests, give it an exclusive
 writing phase. Freeze the result, then run tester in validate-only mode and
 reviewer in parallel on the same candidate. Resolve blockers through fresh
-developer invocations and repeat both gates. Make focused local commits after
-passing gates and update the ledger. Do not push, change live resources, grant
-permissions, publish icons, or promote any agent. Return one consolidated result
-and the next required human gate.
+developer invocations and repeat both gates. Make focused commits and push to
+origin main after passing gates. Update the ledger. Do not create branches or
+worktrees, store code outside this checkout, change live resources, grant
+permissions, publish icons, or promote any agent. Return one consolidated result.
 ```
 
 Allow relevant local file/terminal actions when prompted. Follow each subagent's
 collapsible activity or read-only peer view; direct follow-up instructions go to
 the parent chat, not those read-only subagent views.
 
-### 4. Optional parallel implementation
+### 4. Parallel analysis, sequential editing
 
-After agreeing the architecture, ask the parent to create isolated A/B worktrees
-from the same recorded baseline and invoke `developer` separately with each exact
-path. It must keep shared packaging/CI work serialized and integrate one stream
-at a time. If the installed harness cannot access the second worktree, use a
-separate VS Code session for that independent stream and return its result to the
-original parent explicitly. Only the original parent integrates or releases.
-
-Do not run several writers in the same window/checkout and assume subagent
-context isolation prevents conflicts. Start without nested agents or extra
-sessions; add parallel editing only when it demonstrably helps.
+Keep a single parent session in this checkout. It can run independent analysis
+and the frozen-candidate tester/reviewer pair in parallel. Developer and
+test-authoring phases take turns; no second writing session or worktree is needed.
+Only the parent stages, commits and pushes. A new package starts from the last
+accepted main commit, not an unrecorded partial change.
 
 ### 5. Resume and release deliberately
 
 After reopening VS Code, start project-orchestrator with: "Read the ledger and
 local .agent-work state, reconcile with Git, and resume the next ready package
-in local-only mode." It must not assume any previous subagent is still running.
+on main in code-only mode." It must not assume any previous subagent is still running.
 
 When ready for cloud work, use a separate instruction naming the exact package
 and candidate: "Prepare the Private release preview, verify the current target
 and rollback, and show the proposed cloud changes and synthetic acceptance
 records. Wait for my approval before applying them." Approve a specific release
 only after seeing those details. New artwork has its own preview/selection gate.
-Review the full outgoing Git range before authorizing push to the public repo.
+Review the full outgoing Git range before every normal push to the public repo;
+the direct-main instruction covers relevant passing changes, not secrets or
+unrelated local archives.
 
 ## Completion ledger
 

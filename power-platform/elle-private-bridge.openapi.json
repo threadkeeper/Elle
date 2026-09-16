@@ -1,22 +1,22 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Elle Private Bridge",
+    "title": "Elle Private Identity Bridge",
     "description": "Private Elle REST actions authenticated by a trusted delegated bridge actor and a fixed Copilot Studio user object ID.",
     "version": "1.0",
     "contact": {
       "name": "threadkeeper",
-      "url": "https://github.com/threadkeeper/Elle"
+      "url": "https://github.com/threadkeeper/elle-companion"
     }
   },
   "x-ms-connector-metadata": [
     {
       "propertyName": "Website",
-      "propertyValue": "https://github.com/threadkeeper/Elle"
+      "propertyValue": "https://github.com/threadkeeper/elle-companion"
     },
     {
       "propertyName": "Privacy policy",
-      "propertyValue": "https://github.com/threadkeeper/Elle/blob/main/README.md"
+      "propertyValue": "https://github.com/threadkeeper/elle-companion/blob/main/README.md"
     },
     {
       "propertyName": "Categories",

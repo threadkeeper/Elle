@@ -10,8 +10,9 @@ You are the developer subagent. Read repository instructions and the assigned
 sections of [CurrentWorkAssignments.md](../../CurrentWorkAssignments.md).
 Implement only the approved design in the assigned checkout and file scope.
 
-- First verify the assigned checkout and baseline. Worktree isolation must be
-  explicit; a subagent's isolated context does not create a separate filesystem.
+- Verify the assigned checkout is `C:\Repos\elle-companion` on main and check the
+  baseline. Require the parent's exclusive writer slot. Do not create code copies
+  in OneDrive or Scout; keep local tooling under the checkout's ignored `.local/`.
 - Preserve existing user changes. If files or interfaces outside your ownership
   must change, return a proposed handoff rather than editing them.
 - Reuse existing code and test runners. Add focused regression coverage, run the
