@@ -3,6 +3,7 @@ import copy
 import hashlib
 import io
 import json
+import re
 import sys
 import time
 import zipfile
@@ -15,7 +16,6 @@ from azure.ai.projects.models import (
     CodeDependencyResolution,
     FixedRatioVersionSelectionRule,
     HostedAgentDefinition,
-    MCPToolboxTool,
     ProtocolVersionRecord,
     VersionSelector,
     VersionRefIndicator,
@@ -31,6 +31,13 @@ PROJECT_ENDPOINT = (
 )
 AGENT_NAME = "elle"
 TOOLBOX_NAME = "elle-tools"
+EXPECTED_TOOLBOX_VERSION = "3"
+CONTINUITY_ENDPOINT = (
+    "https://elle-private-vnet.yellowsky-9d92d540.swedencentral."
+    "azurecontainerapps.io/continuity/context"
+)
+CONTINUITY_SCOPE = "api://0479a728-6b4d-4d96-8693-ef766bc8e1fe/.default"
+_PROBE_NONCE_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
 
 
 def prompt_text() -> str:
@@ -48,49 +55,12 @@ def package_source() -> tuple[bytes, str]:
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.write(SOURCE / "main.py", "main.py")
         archive.write(SOURCE / "caller_identity.py", "caller_identity.py")
+        archive.write(SOURCE / "continuity.py", "continuity.py")
         archive.write(SOURCE / "request_scoped_tools.py", "request_scoped_tools.py")
         archive.write(SOURCE / "requirements.txt", "requirements.txt")
         archive.writestr("instructions.txt", prompt_text())
     payload = buffer.getvalue()
     return payload, hashlib.sha256(payload).hexdigest()
-
-
-def stage_toolbox(
-    project: AIProjectClient, additions: list[str], base_version: str | None = None
-) -> str:
-    current = project.toolboxes.get(TOOLBOX_NAME)
-    baseline_version = base_version or current.default_version
-    baseline = project.toolboxes.get_version(TOOLBOX_NAME, baseline_version)
-    tools = list(baseline.tools)
-    names = {tool.name for tool in tools}
-    for addition in additions:
-        name, separator, connection = addition.partition("=")
-        if not separator or not name.strip() or not connection.strip():
-            raise ValueError("--add-mcp must be NAME=CONNECTION")
-        if name in names:
-            raise ValueError(f"Tool source already exists: {name}")
-        project.connections.get(connection)
-        tools.append(
-            MCPToolboxTool(
-                name=name,
-                server_label=name,
-                project_connection_id=connection,
-                headers={"Accept": "application/json, text/event-stream"},
-                require_approval="never",
-            )
-        )
-        names.add(name)
-    if not additions:
-        return baseline_version
-    created = project.toolboxes.create_version(
-        TOOLBOX_NAME,
-        description=f"Elle candidate based on toolbox {baseline_version}.",
-        metadata={"owner": "Elle", "baseline": baseline_version},
-        tools=tools,
-        skills=baseline.skills,
-        policies=baseline.policies,
-    )
-    return created.version
 
 
 def wait_until_active(
@@ -111,7 +81,13 @@ def wait_until_active(
     raise TimeoutError("Timed out waiting for the hosted agent to become active")
 
 
-def deploy(project: AIProjectClient, toolbox_version: str) -> str:
+def deploy(
+    project: AIProjectClient,
+    toolbox_version: str,
+    identity_binding_probe_nonce: str | None = None,
+) -> str:
+    if not isinstance(toolbox_version, str) or toolbox_version != EXPECTED_TOOLBOX_VERSION:
+        raise ValueError("Continuity candidate requires toolbox version 3")
     endpoint = project.agents.get(AGENT_NAME).agent_endpoint
     if endpoint is None or endpoint.version_selector is None:
         raise RuntimeError("Pin live traffic to a version before staging")
@@ -123,6 +99,19 @@ def deploy(project: AIProjectClient, toolbox_version: str) -> str:
         f"{PROJECT_ENDPOINT}/toolboxes/{TOOLBOX_NAME}/versions/"
         f"{toolbox_version}/mcp?api-version=v1"
     )
+    environment_variables = {
+        "AZURE_AI_MODEL_DEPLOYMENT_NAME": "model-router",
+        "ELLE_CONTINUITY_ENDPOINT": CONTINUITY_ENDPOINT,
+        "ELLE_CONTINUITY_SCOPE": CONTINUITY_SCOPE,
+        "ELLE_TOOLBOX_LIFETIME": "request_scoped",
+        "TOOLBOX_ENDPOINT": toolbox_endpoint,
+    }
+    if identity_binding_probe_nonce is not None:
+        if not _PROBE_NONCE_PATTERN.fullmatch(identity_binding_probe_nonce):
+            raise ValueError("Identity binding probe nonce must be safe bounded ASCII")
+        environment_variables["ELLE_IDENTITY_BINDING_PROBE_NONCE"] = (
+            identity_binding_probe_nonce
+        )
     created = project.agents.create_version_from_code(
         agent_name=AGENT_NAME,
         description=(
@@ -136,11 +125,7 @@ def deploy(project: AIProjectClient, toolbox_version: str) -> str:
                 entry_point=["python", "main.py"],
                 dependency_resolution=CodeDependencyResolution.REMOTE_BUILD,
             ),
-            environment_variables={
-                "AZURE_AI_MODEL_DEPLOYMENT_NAME": "model-router",
-                "ELLE_TOOLBOX_LIFETIME": "request_scoped",
-                "TOOLBOX_ENDPOINT": toolbox_endpoint,
-            },
+            environment_variables=environment_variables,
             protocol_versions=[
                 ProtocolVersionRecord(protocol="responses", version="2.0.0")
             ],
@@ -210,17 +195,24 @@ def main() -> None:
     action.add_argument("--promote-version", help="Promote an already-tested version")
     action.add_argument("--test-version", help="Smoke-test one explicit candidate")
     parser.add_argument("--expected-live-version", help="Required guard for promotion")
-    source = parser.add_mutually_exclusive_group()
-    source.add_argument("--toolbox-version", help="Stage against this existing toolbox")
-    source.add_argument("--add-mcp", action="append", default=[], metavar="NAME=CONNECTION")
-    parser.add_argument("--base-toolbox-version", help="Baseline for --add-mcp")
+    parser.add_argument("--toolbox-version", help="Stage against this existing toolbox")
+    parser.add_argument(
+        "--identity-binding-probe-nonce",
+        help="Stage a separate temporary operator-only identity binding probe candidate",
+    )
     args = parser.parse_args()
     if args.promote_version and not args.expected_live_version:
         parser.error("--promote-version requires --expected-live-version")
-    if (args.promote_version or args.test_version) and (args.toolbox_version or args.add_mcp):
+    if (args.promote_version or args.test_version) and (
+        args.toolbox_version or args.identity_binding_probe_nonce
+    ):
         parser.error("Testing/promotion cannot be combined with staging options")
-    if args.base_toolbox_version and not args.add_mcp:
-        parser.error("--base-toolbox-version requires --add-mcp")
+    if args.toolbox_version and args.toolbox_version != EXPECTED_TOOLBOX_VERSION:
+        parser.error("Staging requires --toolbox-version 3")
+    if args.identity_binding_probe_nonce and not args.toolbox_version:
+        parser.error("Identity binding probe staging requires --toolbox-version")
+    if not (args.promote_version or args.test_version or args.toolbox_version):
+        parser.error("Staging requires explicit --toolbox-version")
 
     PROJECT_ENDPOINT = args.project_endpoint.rstrip("/")
     credential = AzureCliCredential(process_timeout=120)
@@ -232,11 +224,11 @@ def main() -> None:
         if args.test_version:
             print(smoke_test(project, args.test_version))
             return
-        toolbox_version = args.toolbox_version or stage_toolbox(
-            project, args.add_mcp, args.base_toolbox_version
-        )
+        toolbox_version = args.toolbox_version
         project.toolboxes.get_version(TOOLBOX_NAME, toolbox_version)
-        agent_version = deploy(project, toolbox_version)
+        agent_version = deploy(
+            project, toolbox_version, args.identity_binding_probe_nonce
+        )
 
     print(
         json.dumps(
