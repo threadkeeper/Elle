@@ -403,16 +403,16 @@ released` separately so a local PASS cannot silently become a deployed claim.
 
 | Package | Status / current lease | Commit / evidence | Next gate |
 | --- | --- | --- | --- |
-| A | Staged; Private transport deployed, not yet released | Commit `62a587f`; Private revision `0000013`; health/auth guards PASS; toolbox v4 progressed from HTTP 405 to delegated authorization | Complete allowlisted-presenter discovery and Private tool smoke test |
-| B | Staged for single-presenter demo; multi-user onboarding deferred | Commit `b5a9dab`; full tester gate PASS; scoped tester/reviewer DEMO-PASS; hosted agent v5 active on toolbox v4 with no live traffic | Run the allowlisted-presenter v5 smoke test and keep agent v3 as rollback |
-| C | Blocked on presenter identity, not transport | Toolbox v4 preserves four baseline sources; current administrator is outside the Private allowlist and correctly receives HTTP 401 | Sign in with an allowlisted DemoUser, authorize that same user, then rerun discovery and synthetic cleanup test |
+| A | Released to the Private backend | Commit `62a587f`; Private revision `0000013`; health/auth guards PASS; authorized toolbox-v4 discovery no longer fails on transport | Keep revision `0000012` digest as backend rollback |
+| B | Released for single-presenter demo; multi-user isolation deferred | Commits `b5a9dab` and `696c953`; local gates PASS; v7 uses explicit long-lived demo mode | Validate two sequential DemoUser1 turns; do not claim multi-user safety |
+| C | Direct discovery accepted; M365 channel validation pending | DemoUser1 discovery exposes all 13 tools, including seven Private functions; CLI-hosted invocation still receives a claim-rejected token | Start a fresh DemoUser1 M365 conversation, complete channel consent if offered, and exercise one synthetic Private read/write/cleanup cycle |
 | D | Planned; no invocation | Existing service/catalog, not attached live | Separate OAuth and Wisdom acceptance |
 | E | Planned; no invocation | Existing excluded connection, not accepted | Confirm supported Work IQ contract/auth |
 | F | Planned; no invocation | Published icons 0b1b471, app 1.0.2 | Native-size candidates and user selection |
 | G-SQL | Planned; no invocation | Scope not yet accepted | Authorized database/entity selection |
 | G-Speech | Planned; no invocation | Not yet accepted | Endpoint/auth/storage inventory |
 | G-Chart | Planned; no invocation | Not yet accepted | Endpoint/artifact/auth inventory |
-| R | Hosted candidate staged; promotion pending presenter gate | Agent v5 active on toolbox v4; toolbox default remains v3; live routing remains 100% agent v3 | Pass presenter smoke, then promote v5 with guarded rollback to v3 |
+| R | Live single-presenter demo | Agent v7 is 100% live on toolbox v4; Activity/Responses and Entra/BotServiceRbac preserved; agent v3 remains rollback | Verify a real M365 turn; route back to v3 on Private failure |
 
 ## Guidance applied
 
