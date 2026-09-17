@@ -6,7 +6,9 @@ param(
     [Parameter(Mandatory)][string]$RegistryName,
     [Parameter(Mandatory)][string]$PrivateAppName,
     [Parameter(Mandatory)][string]$WisdomAppName,
-    [Parameter(Mandatory)][string]$ImageTag
+    [Parameter(Mandatory)][string]$ImageTag,
+    [ValidateSet('Both', 'Private', 'Wisdom')][string]$Target = 'Both',
+    [string]$ExpectedCurrentImage
 )
 
 Set-StrictMode -Version Latest
@@ -33,6 +35,12 @@ if ($PrivateAppName -eq $WisdomAppName) {
 if ($ImageTag -notmatch '\A[0-9a-fA-F]{40}\z') {
     throw 'ImageTag must be a full Git commit SHA.'
 }
+if ($Target -ne 'Both' -and [string]::IsNullOrWhiteSpace($ExpectedCurrentImage)) {
+    throw 'ExpectedCurrentImage is required for a single-service target.'
+}
+if ($Target -ne 'Both' -and $ExpectedCurrentImage -cnotmatch '\A[a-zA-Z0-9][a-zA-Z0-9._:/@-]{0,1023}\z') {
+    throw 'ExpectedCurrentImage has an invalid image reference.'
+}
 if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
     throw 'Azure CLI is required.'
 }
@@ -41,6 +49,37 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $dockerfile = Join-Path $repoRoot 'Dockerfile'
 if (-not (Test-Path -LiteralPath $dockerfile -PathType Leaf)) {
     throw 'Repository Dockerfile was not found.'
+}
+
+$selectedApps = @(switch ($Target) {
+    'Both' {
+        [pscustomobject]@{ Role = 'Private'; Name = $PrivateAppName }
+        [pscustomobject]@{ Role = 'Wisdom'; Name = $WisdomAppName }
+    }
+    'Private' { [pscustomobject]@{ Role = 'Private'; Name = $PrivateAppName } }
+    'Wisdom' { [pscustomobject]@{ Role = 'Wisdom'; Name = $WisdomAppName } }
+})
+
+function Get-CurrentImage {
+    param([string]$AppName)
+
+    $currentImage = & az containerapp show --subscription $SubscriptionId `
+        --resource-group $ResourceGroup --name $AppName `
+        --query 'properties.template.containers[0].image' --output tsv 2>$null
+    if ($LASTEXITCODE -ne 0) { throw 'Container app image lookup failed.' }
+    if ($currentImage -isnot [string] -or
+        $currentImage -cnotmatch '\A[a-zA-Z0-9][a-zA-Z0-9._:/@-]{0,1023}\z') {
+        throw 'Container app returned an invalid image reference.'
+    }
+    return $currentImage
+}
+
+$rollbackImages = @{}
+foreach ($app in $selectedApps) {
+    $rollbackImages[$app.Role] = Get-CurrentImage -AppName $app.Name
+}
+if ($Target -ne 'Both' -and $rollbackImages[$Target] -cne $ExpectedCurrentImage) {
+    throw "The $Target app current image does not match ExpectedCurrentImage."
 }
 
 & az acr build --subscription $SubscriptionId --registry $RegistryName `
@@ -57,11 +96,29 @@ if ($registryLogin -isnot [string] -or $registryLogin -notmatch '\A[a-zA-Z0-9][a
 }
 $image = "${registryLogin}/elle:$ImageTag"
 
-foreach ($app in @($PrivateAppName, $WisdomAppName)) {
+foreach ($app in $selectedApps) {
+    $currentImage = Get-CurrentImage -AppName $app.Name
+    if ($Target -ne 'Both' -and $currentImage -cne $ExpectedCurrentImage) {
+        throw "The $Target app current image changed before update and does not match ExpectedCurrentImage."
+    }
+    $rollbackImages[$app.Role] = $currentImage
+    $rollbackEvidence = @(
+        "rollback_target=$($app.Role)"
+        "rollback_image[$($app.Role)]=$currentImage"
+    )
+    $rollbackEvidence | Write-Output
+    if ($env:GITHUB_STEP_SUMMARY) {
+        $rollbackEvidence | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8
+    }
+
     # Only replace the image: identities, ingress, secrets and role settings are preprovisioned.
     & az containerapp update --subscription $SubscriptionId `
-        --resource-group $ResourceGroup --name $app --image $image --output none 2>$null
+        --resource-group $ResourceGroup --name $app.Name --image $image --output none 2>$null
     if ($LASTEXITCODE -ne 0) { throw 'Container app image update failed.' }
+    $deployedImage = Get-CurrentImage -AppName $app.Name
+    if ($deployedImage -cne $image) {
+        throw "The $($app.Role) app did not report the requested image after update."
+    }
 }
 
 function Test-Endpoint {
@@ -84,10 +141,10 @@ function Test-Endpoint {
     return $false
 }
 
-$verifiedUrls = @()
-foreach ($app in @($PrivateAppName, $WisdomAppName)) {
+$verifiedEndpoints = @{}
+foreach ($app in $selectedApps) {
     $fqdn = & az containerapp show --subscription $SubscriptionId `
-        --resource-group $ResourceGroup --name $app `
+        --resource-group $ResourceGroup --name $app.Name `
         --query properties.configuration.ingress.fqdn --output tsv 2>$null
     if ($LASTEXITCODE -ne 0) { throw 'Container app endpoint lookup failed.' }
     if ($fqdn -isnot [string] -or $fqdn -notmatch '\A[a-z0-9][a-z0-9.-]*\.azurecontainerapps\.io\z') {
@@ -100,14 +157,18 @@ foreach ($app in @($PrivateAppName, $WisdomAppName)) {
     if (-not (Test-Endpoint -Uri "$url/mcp" -Method 'POST' -ExpectedStatus 401)) {
         throw 'Container app anonymous authentication verification failed.'
     }
-    if ($app -eq $PrivateAppName -and
+    if ($app.Role -eq 'Private' -and
         -not (Test-Endpoint -Uri "$url/bridge/elle_context" -Method 'POST' -ExpectedStatus 401)) {
         throw 'Private bridge authentication verification failed.'
     }
-    $verifiedUrls += "$url/mcp"
+    $verifiedEndpoints[$app.Role] = "$url/mcp"
 }
 
-foreach ($url in $verifiedUrls) { Write-Output $url }
+$evidence = @("target=$Target", "new_image=$image")
+foreach ($app in $selectedApps) {
+    $evidence += "endpoint[$($app.Role)]=$($verifiedEndpoints[$app.Role])"
+}
+$evidence | Write-Output
 if ($env:GITHUB_STEP_SUMMARY) {
-    $verifiedUrls | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8
+    $evidence | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8
 }

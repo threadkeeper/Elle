@@ -17,6 +17,41 @@ const CACHE_LIFETIME: Duration = Duration::from_secs(3600);
 const REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 const CLOCK_LEEWAY: u64 = 30;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum AuthRejection {
+    TokenFormatInvalid,
+    HeaderRejected,
+    SigningKeyUnavailable,
+    SignatureInvalid,
+    ClaimsShapeInvalid,
+    TenantMismatch,
+    OwnerNotAllowed,
+    AudienceMismatch,
+    IssuerMismatch,
+    ScopeMissing,
+    LifetimeInvalid,
+}
+
+impl AuthRejection {
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            Self::TokenFormatInvalid => "token_format_invalid",
+            Self::HeaderRejected => "header_rejected",
+            Self::SigningKeyUnavailable => "signing_key_unavailable",
+            Self::SignatureInvalid => "signature_invalid",
+            Self::ClaimsShapeInvalid => "claims_shape_invalid",
+            Self::TenantMismatch => "tenant_mismatch",
+            Self::OwnerNotAllowed => "owner_not_allowed",
+            Self::AudienceMismatch => "audience_mismatch",
+            Self::IssuerMismatch => "issuer_mismatch",
+            Self::ScopeMissing => "scope_missing",
+            Self::LifetimeInvalid => "lifetime_invalid",
+        }
+    }
+}
+
+type AuthResult<T> = std::result::Result<T, AuthRejection>;
+
 /// Verifies RS256 tokens for one configured tenant, application and owner.
 ///
 /// No unverified claim or token-provided URL selects a key endpoint.
@@ -161,40 +196,46 @@ impl EntraVerifier {
     /// All failures are redacted; cached keys expire after one hour and refresh
     /// attempts, including unknown-key requests, are limited to once per minute.
     pub fn verify(&mut self, token: &str) -> Result<OwnerId> {
+        self.verify_diagnostic(token)
+            .map_err(|_| Error::Unauthorized)
+    }
+
+    pub(crate) fn verify_diagnostic(&mut self, token: &str) -> AuthResult<OwnerId> {
         if token.is_empty() || token.len() > MAX_TOKEN_BYTES {
-            return Err(Error::Unauthorized);
+            return Err(AuthRejection::TokenFormatInvalid);
         }
         let mut parts = token.split('.');
-        let header_part = parts.next().ok_or(Error::Unauthorized)?;
-        let claims_part = parts.next().ok_or(Error::Unauthorized)?;
-        let signature_part = parts.next().ok_or(Error::Unauthorized)?;
+        let header_part = parts.next().ok_or(AuthRejection::TokenFormatInvalid)?;
+        let claims_part = parts.next().ok_or(AuthRejection::TokenFormatInvalid)?;
+        let signature_part = parts.next().ok_or(AuthRejection::TokenFormatInvalid)?;
         if parts.next().is_some()
             || [header_part, claims_part, signature_part]
                 .iter()
                 .any(|part| part.is_empty())
         {
-            return Err(Error::Unauthorized);
+            return Err(AuthRejection::TokenFormatInvalid);
         }
+        let header_bytes = decode(header_part).map_err(|_| AuthRejection::TokenFormatInvalid)?;
         let header: TokenHeader =
-            serde_json::from_slice(&decode(header_part)?).map_err(|_| Error::Unauthorized)?;
+            serde_json::from_slice(&header_bytes).map_err(|_| AuthRejection::HeaderRejected)?;
         if header.alg != "RS256"
             || !valid_kid(&header.kid)
             || !header.crit.is_empty()
             || header.b64 == Some(false)
         {
-            return Err(Error::Unauthorized);
+            return Err(AuthRejection::HeaderRejected);
         }
-        let signature = decode(signature_part)?;
+        let signature = decode(signature_part).map_err(|_| AuthRejection::TokenFormatInvalid)?;
         if !(256..=1024).contains(&signature.len()) {
-            return Err(Error::Unauthorized);
+            return Err(AuthRejection::TokenFormatInvalid);
         }
-        let claims_bytes = decode(claims_part)?;
+        let claims_bytes = decode(claims_part).map_err(|_| AuthRejection::TokenFormatInvalid)?;
         self.ensure_key(&header.kid)?;
         let key = self
             .keys
             .iter()
             .find(|key| key.kid == header.kid)
-            .ok_or(Error::Unauthorized)?;
+            .ok_or(AuthRejection::SigningKeyUnavailable)?;
         let signed_length = header_part.len() + 1 + claims_part.len();
         RsaPublicKeyComponents {
             n: key.modulus.as_slice(),
@@ -205,39 +246,53 @@ impl EntraVerifier {
             &token.as_bytes()[..signed_length],
             &signature,
         )
-        .map_err(|_| Error::Unauthorized)?;
+        .map_err(|_| AuthRejection::SignatureInvalid)?;
         // Claims are interpreted only after authenticating their exact encoded bytes.
         let claims: Claims =
-            serde_json::from_slice(&claims_bytes).map_err(|_| Error::Unauthorized)?;
+            serde_json::from_slice(&claims_bytes).map_err(|_| AuthRejection::ClaimsShapeInvalid)?;
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|_| Error::Unauthorized)?
+            .map_err(|_| AuthRejection::LifetimeInvalid)?
             .as_secs();
         self.validate_claims(&claims, now)
     }
 
-    fn validate_claims(&self, claims: &Claims, now: u64) -> Result<OwnerId> {
-        if claims.tid != self.tenant_id
-            || self
-                .allowed_object_ids
-                .as_ref()
-                .is_some_and(|allowed| !allowed.contains(&claims.oid))
-            || claims.aud != self.audience
-            || claims.iss != self.authority
-            || !claims
-                .scp
-                .split_ascii_whitespace()
-                .any(|s| s == "access_as_user")
-            || claims.exp <= now.saturating_sub(CLOCK_LEEWAY)
+    fn validate_claims(&self, claims: &Claims, now: u64) -> AuthResult<OwnerId> {
+        if claims.tid != self.tenant_id {
+            return Err(AuthRejection::TenantMismatch);
+        }
+        let owner = OwnerId::new(&claims.tid, &claims.oid)
+            .map_err(|_| AuthRejection::ClaimsShapeInvalid)?;
+        if self
+            .allowed_object_ids
+            .as_ref()
+            .is_some_and(|allowed| !allowed.contains(&claims.oid))
+        {
+            return Err(AuthRejection::OwnerNotAllowed);
+        }
+        if claims.aud != self.audience {
+            return Err(AuthRejection::AudienceMismatch);
+        }
+        if claims.iss != self.authority {
+            return Err(AuthRejection::IssuerMismatch);
+        }
+        if !claims
+            .scp
+            .split_ascii_whitespace()
+            .any(|scope| scope == "access_as_user")
+        {
+            return Err(AuthRejection::ScopeMissing);
+        }
+        if claims.exp <= now.saturating_sub(CLOCK_LEEWAY)
             || claims.nbf > now.saturating_add(CLOCK_LEEWAY)
             || claims.nbf >= claims.exp
         {
-            return Err(Error::Unauthorized);
+            return Err(AuthRejection::LifetimeInvalid);
         }
-        OwnerId::new(&claims.tid, &claims.oid).map_err(|_| Error::Unauthorized)
+        Ok(owner)
     }
 
-    fn ensure_key(&mut self, kid: &str) -> Result<()> {
+    fn ensure_key(&mut self, kid: &str) -> AuthResult<()> {
         let now = Instant::now();
         let fresh = self
             .fetched_at
@@ -249,7 +304,7 @@ impl EntraVerifier {
             .last_attempt
             .is_some_and(|attempt| now.duration_since(attempt) < REFRESH_INTERVAL)
         {
-            return Err(Error::Unauthorized);
+            return Err(AuthRejection::SigningKeyUnavailable);
         }
         self.last_attempt = Some(now);
         let endpoint = format!(
@@ -260,26 +315,26 @@ impl EntraVerifier {
             .agent
             .get(&endpoint)
             .call()
-            .map_err(|_| Error::Unauthorized)?;
+            .map_err(|_| AuthRejection::SigningKeyUnavailable)?;
         if response.status() != 200 {
-            return Err(Error::Unauthorized);
+            return Err(AuthRejection::SigningKeyUnavailable);
         }
         let mut bytes = Vec::new();
         response
             .into_reader()
             .take(MAX_JWKS_BYTES + 1)
             .read_to_end(&mut bytes)
-            .map_err(|_| Error::Unauthorized)?;
+            .map_err(|_| AuthRejection::SigningKeyUnavailable)?;
         if bytes.len() as u64 > MAX_JWKS_BYTES {
-            return Err(Error::Unauthorized);
+            return Err(AuthRejection::SigningKeyUnavailable);
         }
-        let keys = parse_keys(&bytes)?;
+        let keys = parse_keys(&bytes).map_err(|_| AuthRejection::SigningKeyUnavailable)?;
         self.keys = keys;
         self.fetched_at = Some(Instant::now());
         if self.keys.iter().any(|key| key.kid == kid) {
             Ok(())
         } else {
-            Err(Error::Unauthorized)
+            Err(AuthRejection::SigningKeyUnavailable)
         }
     }
 }
@@ -359,6 +414,13 @@ mod tests {
         EntraVerifier::new(TENANT, APP, OWNER).unwrap()
     }
 
+    fn valid_claims(verifier: &EntraVerifier) -> serde_json::Value {
+        json!({
+            "tid":TENANT,"oid":OWNER,"aud":APP,"iss":verifier.authority(),
+            "exp":1100,"nbf":900,"scp":"other access_as_user"
+        })
+    }
+
     #[test]
     fn config_is_pinned_and_checked_offline() {
         assert!(EntraVerifier::new("common", APP, OWNER).is_err());
@@ -383,27 +445,98 @@ mod tests {
     }
 
     #[test]
+    fn rejection_labels_are_fixed_and_public_verify_stays_generic() {
+        let labels = [
+            (AuthRejection::TokenFormatInvalid, "token_format_invalid"),
+            (AuthRejection::HeaderRejected, "header_rejected"),
+            (
+                AuthRejection::SigningKeyUnavailable,
+                "signing_key_unavailable",
+            ),
+            (AuthRejection::SignatureInvalid, "signature_invalid"),
+            (AuthRejection::ClaimsShapeInvalid, "claims_shape_invalid"),
+            (AuthRejection::TenantMismatch, "tenant_mismatch"),
+            (AuthRejection::OwnerNotAllowed, "owner_not_allowed"),
+            (AuthRejection::AudienceMismatch, "audience_mismatch"),
+            (AuthRejection::IssuerMismatch, "issuer_mismatch"),
+            (AuthRejection::ScopeMissing, "scope_missing"),
+            (AuthRejection::LifetimeInvalid, "lifetime_invalid"),
+        ];
+        for (rejection, label) in labels {
+            assert_eq!(rejection.label(), label);
+        }
+
+        let mut verifier = verifier();
+        assert_eq!(
+            verifier.verify_diagnostic("not-a-token"),
+            Err(AuthRejection::TokenFormatInvalid)
+        );
+        assert_eq!(verifier.verify("not-a-token"), Err(Error::Unauthorized));
+    }
+
+    #[test]
+    fn token_header_key_and_signature_rejections_are_distinct() {
+        let mut verifier = verifier();
+        let signature = URL_SAFE_NO_PAD.encode([0; 256]);
+        let invalid_header = URL_SAFE_NO_PAD.encode(br#"{"alg":"none","kid":"test"}"#);
+        assert_eq!(
+            verifier.verify_diagnostic(&format!("{invalid_header}.e30.{signature}")),
+            Err(AuthRejection::HeaderRejected)
+        );
+
+        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"RS256","kid":"test"}"#);
+        verifier.last_attempt = Some(Instant::now());
+        assert_eq!(
+            verifier.verify_diagnostic(&format!("{header}.e30.{signature}")),
+            Err(AuthRejection::SigningKeyUnavailable)
+        );
+
+        verifier.keys = parse_keys(
+            &serde_json::to_vec(&json!({"keys":[{
+                "kid":"test","kty":"RSA","alg":"RS256","use":"sig",
+                "n":URL_SAFE_NO_PAD.encode([0xff;256]),"e":"AQAB"
+            }]}))
+            .unwrap(),
+        )
+        .unwrap();
+        verifier.fetched_at = Some(Instant::now());
+        assert_eq!(
+            verifier.verify_diagnostic(&format!("{header}.e30.{signature}")),
+            Err(AuthRejection::SignatureInvalid)
+        );
+    }
+
+    #[test]
     fn claims_require_exact_owner_audience_issuer_and_scope() {
         let verifier = verifier();
-        let valid = json!({
-            "tid":TENANT,"oid":OWNER,"aud":APP,"iss":verifier.authority(),
-            "exp":1100,"nbf":900,"scp":"other access_as_user"
-        });
+        let valid = valid_claims(&verifier);
         let claims: Claims = serde_json::from_value(valid.clone()).unwrap();
         assert!(verifier.validate_claims(&claims, 1000).is_ok());
-        for (field, value) in [
-            ("tid", json!(APP)),
-            ("oid", json!(APP)),
-            ("aud", json!(TENANT)),
-            ("iss", json!("https://attacker.example/v2.0")),
-            ("scp", json!("access_as_user_extra")),
-            ("exp", json!(970)),
-            ("nbf", json!(1031)),
+        for (field, value, expected) in [
+            ("tid", json!(APP), AuthRejection::TenantMismatch),
+            ("oid", json!(APP), AuthRejection::OwnerNotAllowed),
+            ("aud", json!(TENANT), AuthRejection::AudienceMismatch),
+            (
+                "iss",
+                json!("https://attacker.example/v2.0"),
+                AuthRejection::IssuerMismatch,
+            ),
+            (
+                "scp",
+                json!("access_as_user_extra"),
+                AuthRejection::ScopeMissing,
+            ),
+            ("exp", json!(970), AuthRejection::LifetimeInvalid),
+            ("nbf", json!(1031), AuthRejection::LifetimeInvalid),
         ] {
             let mut invalid = valid.clone();
             invalid[field] = value;
             let claims = serde_json::from_value(invalid).unwrap();
-            assert!(verifier.validate_claims(&claims, 1000).is_err(), "{field}");
+            assert_eq!(
+                verifier.validate_claims(&claims, 1000),
+                Err(expected),
+                "{field}"
+            );
         }
 
         for field in ["tid", "oid", "aud", "iss", "exp", "nbf", "scp"] {
@@ -411,6 +544,15 @@ mod tests {
             invalid.as_object_mut().unwrap().remove(field);
             assert!(serde_json::from_value::<Claims>(invalid).is_err());
         }
+
+        let tenant_verifier = EntraVerifier::for_tenant_users(TENANT, APP).unwrap();
+        let mut malformed_owner = valid;
+        malformed_owner["oid"] = json!("not-an-object-id");
+        let claims = serde_json::from_value(malformed_owner).unwrap();
+        assert_eq!(
+            tenant_verifier.validate_claims(&claims, 1000),
+            Err(AuthRejection::ClaimsShapeInvalid)
+        );
     }
 
     #[test]
@@ -478,9 +620,14 @@ mod tests {
         verifier.last_attempt = Some(Instant::now());
         let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"RS256","kid":"test"}"#);
         let signature = URL_SAFE_NO_PAD.encode([0; 256]);
-        assert!(verifier
-            .verify(&format!("{header}.e30.{signature}"))
-            .is_err());
+        assert_eq!(
+            verifier.verify_diagnostic(&format!("{header}.e30.{signature}")),
+            Err(AuthRejection::SignatureInvalid)
+        );
+        assert_eq!(
+            verifier.verify(&format!("{header}.e30.{signature}")),
+            Err(Error::Unauthorized)
+        );
         assert!(verifier.ensure_key("unknown").is_err());
         verifier.fetched_at = Some(Instant::now() - CACHE_LIFETIME);
         assert!(verifier.ensure_key("test").is_err());

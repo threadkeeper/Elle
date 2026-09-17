@@ -315,12 +315,16 @@ fn authenticate_bridge(
     let user_id = match arguments.remove("user_object_id") {
         Some(Value::String(user_id)) if !user_id.is_empty() => user_id,
         Some(_) => return Err("malformed_user_assertion"),
-        None => return verifier.verify(token).map_err(|_| "token_rejected"),
+        None => {
+            return verifier
+                .verify_diagnostic(token)
+                .map_err(|rejection| rejection.label())
+        }
     };
     let actor = bridge_verifier
         .ok_or("bridge_verifier_missing")?
-        .verify(token)
-        .map_err(|_| "token_rejected")?;
+        .verify_diagnostic(token)
+        .map_err(|rejection| rejection.label())?;
     policy
         .ok_or("bridge_policy_missing")?
         .owner_for(&actor, &user_id)
@@ -335,7 +339,9 @@ fn authenticate(
         .map_err(|_| "duplicate_authorization")?
         .ok_or("missing_authorization")?;
     let token = bearer(value).ok_or("malformed_bearer")?;
-    verifier.verify(token).map_err(|_| "token_rejected")
+    verifier
+        .verify_diagnostic(token)
+        .map_err(|rejection| rejection.label())
 }
 
 fn read_json_body(
@@ -725,6 +731,8 @@ mod tests {
         );
         assert!(unauthorized.starts_with("HTTP/1.1 401 "));
         assert!(unauthorized.contains("WWW-Authenticate: Bearer test"));
+        assert!(unauthorized.ends_with(r#"{"error":"Unauthorized"}"#));
+        assert!(!unauthorized.contains("token_format_invalid"));
 
         let method_not_allowed = raw_response(b"GET /mcp HTTP/1.1\r\nHost: localhost\r\n\r\n");
         assert!(method_not_allowed.starts_with("HTTP/1.1 405 "));
