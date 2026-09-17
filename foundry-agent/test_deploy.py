@@ -1,5 +1,6 @@
 import contextlib
 import io
+import json
 import sys
 import unittest
 import zipfile
@@ -138,15 +139,17 @@ class DeploymentTests(unittest.TestCase):
         project.toolboxes.get.return_value.default_version = "99"
         client = MagicMock()
         client.return_value.__enter__.return_value = project
+        output = io.StringIO()
         with patch.object(sys, "argv", arguments), patch.object(
             deploy, "AzureCliCredential"
         ), patch.object(deploy, "AIProjectClient", client), patch.object(
             deploy, "deploy", return_value="4"
-        ) as stage_candidate, contextlib.redirect_stdout(io.StringIO()):
+        ) as stage_candidate, contextlib.redirect_stdout(output):
             deploy.main()
         stage_candidate.assert_called_once_with(project, "4", None)
         project.toolboxes.get.assert_not_called()
         project.toolboxes.get_version.assert_called_once_with("elle-tools", "4")
+        self.assertEqual(json.loads(output.getvalue())["model"], "gpt-5.6-luna")
 
     def test_cli_probe_staging_supplies_explicit_toolbox_three(self):
         arguments = [
@@ -208,7 +211,7 @@ class DeploymentTests(unittest.TestCase):
         )
         self.assertEqual(
             definition.environment_variables["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
-            "model-router",
+            "gpt-5.6-luna",
         )
         self.assertNotIn(
             "ELLE_CONTINUITY_ENDPOINT", definition.environment_variables
@@ -217,6 +220,23 @@ class DeploymentTests(unittest.TestCase):
         self.assertNotIn(
             "ELLE_IDENTITY_BINDING_PROBE_NONCE",
             definition.environment_variables,
+        )
+
+    def test_staging_honors_explicit_model_deployment_override(self):
+        self.project.agents.create_version_from_code.return_value.version = "4"
+        with patch.dict(
+            "os.environ", {"AZURE_AI_MODEL_DEPLOYMENT_NAME": "model-router"}
+        ), patch.object(deploy, "wait_until_active"), patch.object(
+            deploy, "package_source", return_value=(b"zip", "digest")
+        ):
+            deploy.deploy(self.project, "4")
+
+        definition = self.project.agents.create_version_from_code.call_args.kwargs[
+            "definition"
+        ]
+        self.assertEqual(
+            definition.environment_variables["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
+            "model-router",
         )
 
     def test_toolbox_three_preserves_continuity_environment(self):

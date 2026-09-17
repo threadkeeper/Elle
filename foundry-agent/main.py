@@ -56,7 +56,7 @@ def build_agent(*, client, credential, toolbox_url: str, name: str, instructions
 
 
 async def main() -> None:
-    model = os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME", "model-router")
+    model = os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-5.6-luna")
     toolbox_url = os.environ["TOOLBOX_ENDPOINT"]
     credential = DefaultAzureCredential(
         exclude_cli_credential=True,

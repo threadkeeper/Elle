@@ -3,6 +3,7 @@ import copy
 import hashlib
 import io
 import json
+import os
 import re
 import sys
 import time
@@ -31,6 +32,7 @@ PROJECT_ENDPOINT = (
 )
 AGENT_NAME = "elle"
 TOOLBOX_NAME = "elle-tools"
+DEFAULT_MODEL_DEPLOYMENT_NAME = "gpt-5.6-luna"
 SUPPORTED_TOOLBOX_VERSIONS = frozenset({"3", "4"})
 CONTINUITY_ENDPOINT = (
     "https://elle-private-vnet.yellowsky-9d92d540.swedencentral."
@@ -38,6 +40,12 @@ CONTINUITY_ENDPOINT = (
 )
 CONTINUITY_SCOPE = "api://0479a728-6b4d-4d96-8693-ef766bc8e1fe/.default"
 _PROBE_NONCE_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
+
+
+def model_deployment_name() -> str:
+    return os.environ.get(
+        "AZURE_AI_MODEL_DEPLOYMENT_NAME", DEFAULT_MODEL_DEPLOYMENT_NAME
+    )
 
 
 def prompt_text() -> str:
@@ -103,7 +111,7 @@ def deploy(
         f"{toolbox_version}/mcp?api-version=v1"
     )
     environment_variables = {
-        "AZURE_AI_MODEL_DEPLOYMENT_NAME": "model-router",
+        "AZURE_AI_MODEL_DEPLOYMENT_NAME": model_deployment_name(),
         "ELLE_TOOLBOX_LIFETIME": "request_scoped",
         "TOOLBOX_ENDPOINT": toolbox_endpoint,
     }
@@ -246,7 +254,7 @@ def main() -> None:
             {
                 "agent": AGENT_NAME,
                 "agentVersion": agent_version,
-                "model": "model-router",
+                "model": model_deployment_name(),
                 "projectEndpoint": PROJECT_ENDPOINT,
                 "toolbox": TOOLBOX_NAME,
                 "toolboxVersion": toolbox_version,
