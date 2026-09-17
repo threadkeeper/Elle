@@ -29,6 +29,12 @@ pub(crate) enum AuthRejection {
     AudienceMismatch,
     IssuerMismatch,
     ScopeMissing,
+    DelegatedScopePresent,
+    ActorMismatch,
+    ClientMismatch,
+    RoleMismatch,
+    VersionMismatch,
+    TokenTypeInvalid,
     LifetimeInvalid,
 }
 
@@ -45,6 +51,12 @@ impl AuthRejection {
             Self::AudienceMismatch => "audience_mismatch",
             Self::IssuerMismatch => "issuer_mismatch",
             Self::ScopeMissing => "scope_missing",
+            Self::DelegatedScopePresent => "delegated_scope_present",
+            Self::ActorMismatch => "actor_mismatch",
+            Self::ClientMismatch => "client_mismatch",
+            Self::RoleMismatch => "role_mismatch",
+            Self::VersionMismatch => "version_mismatch",
+            Self::TokenTypeInvalid => "token_type_invalid",
             Self::LifetimeInvalid => "lifetime_invalid",
         }
     }
@@ -64,6 +76,13 @@ pub struct EntraVerifier {
     fetched_at: Option<Instant>,
     last_attempt: Option<Instant>,
     agent: ureq::Agent,
+}
+
+/// Verifies one tenant-pinned Entra v2 application identity and app role.
+pub struct WorkloadEntraVerifier {
+    verifier: EntraVerifier,
+    actor_id: String,
+    client_id: String,
 }
 
 struct VerificationKey {
@@ -90,6 +109,19 @@ struct Claims {
     iss: String,
     aud: String,
     scp: String,
+}
+
+#[derive(Deserialize)]
+struct WorkloadClaims {
+    tid: String,
+    oid: String,
+    exp: u64,
+    nbf: u64,
+    iss: String,
+    aud: String,
+    azp: String,
+    roles: Vec<String>,
+    ver: String,
 }
 
 #[derive(Deserialize)]
@@ -198,6 +230,13 @@ impl EntraVerifier {
     }
 
     pub(crate) fn verify_diagnostic(&mut self, token: &str) -> AuthResult<OwnerId> {
+        let claims_bytes = self.verify_signed_claims(token)?;
+        let claims: Claims =
+            serde_json::from_slice(&claims_bytes).map_err(|_| AuthRejection::ClaimsShapeInvalid)?;
+        self.validate_claims(&claims, unix_time()?)
+    }
+
+    fn verify_signed_claims(&mut self, token: &str) -> AuthResult<Vec<u8>> {
         if token.is_empty() || token.len() > MAX_TOKEN_BYTES {
             return Err(AuthRejection::TokenFormatInvalid);
         }
@@ -244,14 +283,7 @@ impl EntraVerifier {
             &signature,
         )
         .map_err(|_| AuthRejection::SignatureInvalid)?;
-        // Claims are interpreted only after authenticating their exact encoded bytes.
-        let claims: Claims =
-            serde_json::from_slice(&claims_bytes).map_err(|_| AuthRejection::ClaimsShapeInvalid)?;
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|_| AuthRejection::LifetimeInvalid)?
-            .as_secs();
-        self.validate_claims(&claims, now)
+        Ok(claims_bytes)
     }
 
     fn validate_claims(&self, claims: &Claims, now: u64) -> AuthResult<OwnerId> {
@@ -280,12 +312,7 @@ impl EntraVerifier {
         {
             return Err(AuthRejection::ScopeMissing);
         }
-        if claims.exp <= now.saturating_sub(CLOCK_LEEWAY)
-            || claims.nbf > now.saturating_add(CLOCK_LEEWAY)
-            || claims.nbf >= claims.exp
-        {
-            return Err(AuthRejection::LifetimeInvalid);
-        }
+        validate_lifetime(claims.exp, claims.nbf, now)?;
         Ok(owner)
     }
 
@@ -334,6 +361,107 @@ impl EntraVerifier {
             Err(AuthRejection::SigningKeyUnavailable)
         }
     }
+}
+
+impl WorkloadEntraVerifier {
+    /// Configure a verifier for exactly one application actor and client ID.
+    pub fn new(tenant_id: &str, audience: &str, actor_id: &str, client_id: &str) -> Result<Self> {
+        if ![tenant_id, audience, actor_id, client_id]
+            .iter()
+            .all(|value| valid_uuid(value))
+        {
+            return Err(Error::Configuration(
+                "Continuity tenant, audience, actor and client IDs must be nonzero UUIDs",
+            ));
+        }
+        Ok(Self {
+            verifier: EntraVerifier::configured(tenant_id, audience, None)?,
+            actor_id: actor_id.to_ascii_lowercase(),
+            client_id: client_id.to_ascii_lowercase(),
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_test_jwks(mut self, jwks: &[u8]) -> Result<Self> {
+        self.verifier.keys = parse_keys(jwks)?;
+        self.verifier.fetched_at = Some(Instant::now());
+        self.verifier.last_attempt = Some(Instant::now());
+        Ok(self)
+    }
+
+    /// Authenticate and authorize a bounded application JWT without deriving a user owner.
+    pub(crate) fn verify_diagnostic(&mut self, token: &str) -> AuthResult<()> {
+        let claims_bytes = self.verifier.verify_signed_claims(token)?;
+        let value: serde_json::Value =
+            serde_json::from_slice(&claims_bytes).map_err(|_| AuthRejection::ClaimsShapeInvalid)?;
+        self.validate_claims_value(value, unix_time()?)
+    }
+
+    fn validate_claims_value(&self, value: serde_json::Value, now: u64) -> AuthResult<()> {
+        let object = value.as_object().ok_or(AuthRejection::ClaimsShapeInvalid)?;
+        if object.contains_key("scp") {
+            return Err(AuthRejection::DelegatedScopePresent);
+        }
+        for (name, expected, rejection) in [
+            (
+                "appid",
+                self.client_id.as_str(),
+                AuthRejection::ClientMismatch,
+            ),
+            ("idtyp", "app", AuthRejection::TokenTypeInvalid),
+        ] {
+            if let Some(actual) = object.get(name) {
+                if actual.as_str() != Some(expected) {
+                    return Err(rejection);
+                }
+            }
+        }
+        let claims: WorkloadClaims =
+            serde_json::from_value(value).map_err(|_| AuthRejection::ClaimsShapeInvalid)?;
+        self.validate_claims(&claims, now)
+    }
+
+    fn validate_claims(&self, claims: &WorkloadClaims, now: u64) -> AuthResult<()> {
+        if claims.tid != self.verifier.tenant_id {
+            return Err(AuthRejection::TenantMismatch);
+        }
+        if !valid_uuid(&claims.oid) || !claims.oid.eq_ignore_ascii_case(self.actor_id.as_str()) {
+            return Err(AuthRejection::ActorMismatch);
+        }
+        if claims.aud != self.verifier.audience {
+            return Err(AuthRejection::AudienceMismatch);
+        }
+        if claims.iss != self.verifier.authority {
+            return Err(AuthRejection::IssuerMismatch);
+        }
+        if !valid_uuid(&claims.azp) || !claims.azp.eq_ignore_ascii_case(self.client_id.as_str()) {
+            return Err(AuthRejection::ClientMismatch);
+        }
+        if claims.roles.as_slice() != ["Continuity.Access"] {
+            return Err(AuthRejection::RoleMismatch);
+        }
+        if claims.ver != "2.0" {
+            return Err(AuthRejection::VersionMismatch);
+        }
+        validate_lifetime(claims.exp, claims.nbf, now)
+    }
+}
+
+fn unix_time() -> AuthResult<u64> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| AuthRejection::LifetimeInvalid)
+        .map(|duration| duration.as_secs())
+}
+
+fn validate_lifetime(exp: u64, nbf: u64, now: u64) -> AuthResult<()> {
+    if exp <= now.saturating_sub(CLOCK_LEEWAY)
+        || nbf > now.saturating_add(CLOCK_LEEWAY)
+        || nbf >= exp
+    {
+        return Err(AuthRejection::LifetimeInvalid);
+    }
+    Ok(())
 }
 
 fn decode(value: &str) -> Result<Vec<u8>> {
@@ -457,6 +585,15 @@ mod tests {
             (AuthRejection::AudienceMismatch, "audience_mismatch"),
             (AuthRejection::IssuerMismatch, "issuer_mismatch"),
             (AuthRejection::ScopeMissing, "scope_missing"),
+            (
+                AuthRejection::DelegatedScopePresent,
+                "delegated_scope_present",
+            ),
+            (AuthRejection::ActorMismatch, "actor_mismatch"),
+            (AuthRejection::ClientMismatch, "client_mismatch"),
+            (AuthRejection::RoleMismatch, "role_mismatch"),
+            (AuthRejection::VersionMismatch, "version_mismatch"),
+            (AuthRejection::TokenTypeInvalid, "token_type_invalid"),
             (AuthRejection::LifetimeInvalid, "lifetime_invalid"),
         ];
         for (rejection, label) in labels {
@@ -661,5 +798,113 @@ mod tests {
         assert!(verifier.ensure_key("unknown").is_err());
         verifier.fetched_at = Some(Instant::now() - CACHE_LIFETIME);
         assert!(verifier.ensure_key("test").is_err());
+    }
+
+    fn workload_verifier() -> WorkloadEntraVerifier {
+        WorkloadEntraVerifier::new(TENANT, APP, OWNER, APP).unwrap()
+    }
+
+    fn valid_workload_claims(verifier: &WorkloadEntraVerifier) -> serde_json::Value {
+        json!({
+            "tid":TENANT,"oid":OWNER,"aud":APP,"iss":verifier.verifier.authority(),
+            "exp":1100,"nbf":900,"azp":APP,"roles":["Continuity.Access"],
+            "ver":"2.0","idtyp":"app","appid":APP
+        })
+    }
+
+    #[test]
+    fn workload_config_is_strict_and_valid_claims_are_accepted() {
+        assert!(WorkloadEntraVerifier::new("common", APP, OWNER, APP).is_err());
+        assert!(WorkloadEntraVerifier::new(TENANT, APP, "not-an-oid", APP).is_err());
+        let verifier = workload_verifier();
+        assert!(verifier
+            .validate_claims_value(valid_workload_claims(&verifier), 1000)
+            .is_ok());
+    }
+
+    #[test]
+    fn workload_claim_policy_rejects_wrong_identity_role_version_and_lifetime() {
+        let verifier = workload_verifier();
+        let valid = valid_workload_claims(&verifier);
+        for (field, value, expected) in [
+            ("tid", json!(APP), AuthRejection::TenantMismatch),
+            ("oid", json!(APP), AuthRejection::ActorMismatch),
+            ("aud", json!(TENANT), AuthRejection::AudienceMismatch),
+            (
+                "iss",
+                json!("https://attacker.example/v2.0"),
+                AuthRejection::IssuerMismatch,
+            ),
+            ("azp", json!(TENANT), AuthRejection::ClientMismatch),
+            ("roles", json!([]), AuthRejection::RoleMismatch),
+            (
+                "roles",
+                json!(["Continuity.Access", "Other"]),
+                AuthRejection::RoleMismatch,
+            ),
+            ("roles", json!(["Other"]), AuthRejection::RoleMismatch),
+            ("ver", json!("1.0"), AuthRejection::VersionMismatch),
+            ("appid", json!(TENANT), AuthRejection::ClientMismatch),
+            ("idtyp", json!("user"), AuthRejection::TokenTypeInvalid),
+            ("exp", json!(970), AuthRejection::LifetimeInvalid),
+            ("nbf", json!(1031), AuthRejection::LifetimeInvalid),
+        ] {
+            let mut invalid = valid.clone();
+            invalid[field] = value;
+            assert_eq!(
+                verifier.validate_claims_value(invalid, 1000),
+                Err(expected),
+                "{field}"
+            );
+        }
+
+        for field in [
+            "tid", "oid", "aud", "iss", "azp", "roles", "ver", "exp", "nbf",
+        ] {
+            let mut invalid = valid.clone();
+            invalid.as_object_mut().unwrap().remove(field);
+            assert_eq!(
+                verifier.validate_claims_value(invalid, 1000),
+                Err(AuthRejection::ClaimsShapeInvalid),
+                "{field}"
+            );
+        }
+    }
+
+    #[test]
+    fn workload_optional_claims_are_strict_and_delegated_scope_is_forbidden() {
+        let verifier = workload_verifier();
+        for optional in ["appid", "idtyp"] {
+            let mut claims = valid_workload_claims(&verifier);
+            claims.as_object_mut().unwrap().remove(optional);
+            assert!(
+                verifier.validate_claims_value(claims, 1000).is_ok(),
+                "{optional}"
+            );
+        }
+        for value in [json!("access_as_user"), serde_json::Value::Null] {
+            let mut claims = valid_workload_claims(&verifier);
+            claims["scp"] = value;
+            assert_eq!(
+                verifier.validate_claims_value(claims, 1000),
+                Err(AuthRejection::DelegatedScopePresent)
+            );
+        }
+        for (field, value, expected) in [
+            (
+                "appid",
+                serde_json::Value::Null,
+                AuthRejection::ClientMismatch,
+            ),
+            (
+                "idtyp",
+                serde_json::Value::Null,
+                AuthRejection::TokenTypeInvalid,
+            ),
+        ] {
+            let mut claims = valid_workload_claims(&verifier);
+            claims[field] = value;
+            assert_eq!(verifier.validate_claims_value(claims, 1000), Err(expected));
+        }
     }
 }

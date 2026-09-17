@@ -4,20 +4,119 @@
 //! with request timeouts and rate limits; tiny_http does not expose per-request
 //! socket deadlines. No export or restore routes are provided.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use serde::Deserialize;
 use serde_json::{json, Value};
 use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 use zeroize::Zeroizing;
 
-use crate::auth::EntraVerifier;
+use crate::auth::{EntraVerifier, WorkloadEntraVerifier};
 use crate::error::{Error, Result};
+use crate::identity::OwnerId;
 use crate::mcp;
 use crate::service::MemoryService;
 
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
+const MAX_CONTINUITY_BINDINGS_BYTES: u64 = 1024 * 1024;
+
+/// A validated, tenant-pinned map from opaque continuity handles to memory owners.
+pub struct ContinuityBindings {
+    owners: BTreeMap<String, OwnerId>,
+}
+
+/// Complete optional continuity runtime configuration.
+pub struct ContinuityConfig {
+    verifier: WorkloadEntraVerifier,
+    bindings: ContinuityBindings,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ContinuityBindingsFile {
+    schema_version: u32,
+    tenant_id: String,
+    bindings: Vec<ContinuityBinding>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ContinuityBinding {
+    handle_sha256: String,
+    owner_uuid: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ContinuityContextRequest {
+    query: String,
+    limit: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum ContinuityContextError {
+    Body,
+    Operation,
+}
+
+impl ContinuityBindings {
+    /// Load and validate a bounded strict JSON binding file for one exact tenant.
+    pub fn from_file(path: &Path, tenant_id: &str) -> Result<Self> {
+        let file = File::open(path)
+            .map_err(|_| Error::Configuration("Cannot open continuity bindings file"))?;
+        let mut bytes = Vec::new();
+        file.take(MAX_CONTINUITY_BINDINGS_BYTES + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|_| Error::Configuration("Cannot read continuity bindings file"))?;
+        if bytes.len() as u64 > MAX_CONTINUITY_BINDINGS_BYTES {
+            return Err(Error::Configuration(
+                "Continuity bindings file is too large",
+            ));
+        }
+        Self::from_json(&bytes, tenant_id)
+    }
+
+    fn from_json(bytes: &[u8], tenant_id: &str) -> Result<Self> {
+        let file: ContinuityBindingsFile = serde_json::from_slice(bytes)
+            .map_err(|_| Error::Configuration("Invalid continuity bindings file"))?;
+        if file.schema_version != 1 || file.tenant_id != tenant_id || file.bindings.is_empty() {
+            return Err(Error::Configuration("Invalid continuity bindings file"));
+        }
+        let mut owners = BTreeMap::new();
+        let mut owner_ids = BTreeSet::new();
+        for binding in file.bindings {
+            if !valid_continuity_handle(&binding.handle_sha256) {
+                return Err(Error::Configuration("Invalid continuity bindings file"));
+            }
+            let owner = OwnerId::new(tenant_id, &binding.owner_uuid)
+                .map_err(|_| Error::Configuration("Invalid continuity bindings file"))?;
+            if !owner_ids.insert(owner.as_str().to_owned())
+                || owners.insert(binding.handle_sha256, owner).is_some()
+            {
+                return Err(Error::Configuration("Invalid continuity bindings file"));
+            }
+        }
+        Ok(Self { owners })
+    }
+
+    fn owner_for(&self, handle: &str) -> Option<&OwnerId> {
+        if !valid_continuity_handle(handle) {
+            return None;
+        }
+        self.owners.get(handle)
+    }
+}
+
+impl ContinuityConfig {
+    /// Couple workload authentication and owner bindings as one runtime capability.
+    pub fn new(verifier: WorkloadEntraVerifier, bindings: ContinuityBindings) -> Self {
+        Self { verifier, bindings }
+    }
+}
 
 /// Restricts asserted bridge users to one authenticated transport actor and allow-list.
 pub struct BridgePolicy {
@@ -75,6 +174,29 @@ struct RuntimeState {
     bridge_verifier: Option<EntraVerifier>,
     service: MemoryService,
     role: mcp::ServerRole,
+    continuity: Option<ContinuityConfig>,
+}
+
+/// Optional authenticated routes enabled for this server instance.
+pub struct RuntimeConfig {
+    bridge_verifier: Option<EntraVerifier>,
+    bridge_policy: Option<BridgePolicy>,
+    continuity: Option<ContinuityConfig>,
+}
+
+impl RuntimeConfig {
+    /// Group optional bridge and continuity configuration.
+    pub fn new(
+        bridge_verifier: Option<EntraVerifier>,
+        bridge_policy: Option<BridgePolicy>,
+        continuity: Option<ContinuityConfig>,
+    ) -> Self {
+        Self {
+            bridge_verifier,
+            bridge_policy,
+            continuity,
+        }
+    }
 }
 
 /// Serve a single-owner, sequential JSON MCP endpoint until the listener fails.
@@ -85,10 +207,9 @@ pub fn serve(
     address: &str,
     public_origin: &str,
     verifier: EntraVerifier,
-    bridge_verifier: Option<EntraVerifier>,
     service: MemoryService,
     role: mcp::ServerRole,
-    bridge_policy: Option<BridgePolicy>,
+    runtime: RuntimeConfig,
 ) -> Result<()> {
     let origin = validate_origin(public_origin)?;
     let metadata_url = format!("{origin}/.well-known/oauth-protected-resource");
@@ -105,9 +226,10 @@ pub fn serve(
         Server::http(address).map_err(|_| Error::Transport("Cannot bind the HTTP listener"))?;
     let mut state = RuntimeState {
         verifier,
-        bridge_verifier,
+        bridge_verifier: runtime.bridge_verifier,
         service,
         role,
+        continuity: runtime.continuity,
     };
     loop {
         let request = server
@@ -120,7 +242,7 @@ pub fn serve(
                 origin: &origin,
                 metadata: &metadata,
                 challenge: &challenge_header,
-                bridge_policy: bridge_policy.as_ref(),
+                bridge_policy: runtime.bridge_policy.as_ref(),
             },
             &mut state,
         )
@@ -139,23 +261,52 @@ fn handle_request(
     let request_id = REQUEST_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let method = format!("{:?}", request.method());
     let path = request.url().split('?').next().unwrap_or("").to_owned();
-    eprintln!(
-        "Elle diagnostic: request_id={request_id} role={} method={method} path={path} event=request_started",
-        state.role.name()
-    );
+    let is_continuity_path = path == "/continuity" || path.starts_with("/continuity/");
+    let is_enabled_continuity_route = is_continuity_path
+        && request.method() == &Method::Post
+        && path == "/continuity/context"
+        && state.role == mcp::ServerRole::Private
+        && state.continuity.is_some();
+    if is_continuity_path && !is_enabled_continuity_route {
+        log_continuity(
+            request_id,
+            continuity_log_path(&path),
+            404,
+            "route_not_found",
+        );
+        return reply(request, 404, r#"{"error":"Not found"}"#, None);
+    }
+    if !is_continuity_path {
+        eprintln!(
+            "Elle diagnostic: request_id={request_id} role={} method={method} path={path} event=request_started",
+            state.role.name()
+        );
+    }
     match single_header(&request, "Origin") {
         Ok(None) => {}
         Ok(Some(value)) if value == context.origin => {}
         _ => {
-            eprintln!(
-                "Elle diagnostic: request_id={request_id} role={} status=403 error=forbidden_origin",
-                state.role.name()
-            );
+            if is_continuity_path {
+                log_continuity(
+                    request_id,
+                    continuity_log_path(&path),
+                    403,
+                    "forbidden_origin",
+                );
+            } else {
+                eprintln!(
+                    "Elle diagnostic: request_id={request_id} role={} status=403 error=forbidden_origin",
+                    state.role.name()
+                );
+            }
             return reply(request, 403, r#"{"error":"Forbidden origin"}"#, None);
         }
     }
     if request.method() == &Method::Post && path.starts_with("/bridge/") {
         return handle_bridge(request, request_id, &path, context, state);
+    }
+    if is_continuity_path {
+        return handle_continuity(request, request_id, state);
     }
     match (request.method(), path.as_str()) {
         (&Method::Get, "/healthz") => {
@@ -228,6 +379,127 @@ fn handle_request(
             reply(request, 202, "", None)
         }
     }
+}
+
+fn handle_continuity(request: Request, request_id: u64, state: &mut RuntimeState) -> Result<()> {
+    let continuity = state.continuity.as_mut().ok_or(Error::Configuration(
+        "Continuity configuration is unavailable",
+    ))?;
+    if let Err(rejection) = authenticate_workload(&request, &mut continuity.verifier) {
+        log_continuity(request_id, "/continuity/context", 401, rejection);
+        return reply(
+            request,
+            401,
+            r#"{"error":"Unauthorized"}"#,
+            Some(header("WWW-Authenticate", "Bearer")?),
+        );
+    }
+    handle_authorized_continuity(
+        request,
+        request_id,
+        &continuity.bindings,
+        &mut state.service,
+    )
+}
+
+fn handle_authorized_continuity(
+    mut request: Request,
+    request_id: u64,
+    bindings: &ContinuityBindings,
+    service: &mut MemoryService,
+) -> Result<()> {
+    let owner = resolve_continuity_owner(
+        bindings,
+        single_header(&request, "X-Elle-Continuity-Handle-SHA256")
+            .ok()
+            .flatten(),
+    );
+    let Some(owner) = owner else {
+        log_continuity(request_id, "/continuity/context", 403, "handle_rejected");
+        return reply(request, 403, r#"{"error":"Forbidden"}"#, None);
+    };
+    let body = match read_json_body(&mut request) {
+        Ok(body) => body,
+        Err((status, message)) => {
+            log_continuity(request_id, "/continuity/context", status, "body_rejected");
+            return reply(request, status, message, None);
+        }
+    };
+    match invoke_continuity_context(&owner, &body, service) {
+        Ok(value) => {
+            log_continuity(request_id, "/continuity/context", 200, "none");
+            reply(request, 200, &value.to_string(), None)
+        }
+        Err(ContinuityContextError::Body) => {
+            log_continuity(request_id, "/continuity/context", 400, "body_rejected");
+            reply(request, 400, r#"{"error":"Invalid request body"}"#, None)
+        }
+        Err(ContinuityContextError::Operation) => {
+            log_continuity(request_id, "/continuity/context", 500, "operation_failed");
+            reply(request, 500, r#"{"error":"Context unavailable"}"#, None)
+        }
+    }
+}
+
+fn invoke_continuity_context(
+    owner: &OwnerId,
+    body: &[u8],
+    service: &mut MemoryService,
+) -> std::result::Result<Value, ContinuityContextError> {
+    let arguments: ContinuityContextRequest =
+        serde_json::from_slice(body).map_err(|_| ContinuityContextError::Body)?;
+    if arguments.query.trim().is_empty()
+        || arguments.query.len() > 512
+        || !(1..=20).contains(&arguments.limit)
+    {
+        return Err(ContinuityContextError::Body);
+    }
+    service
+        .context(owner, &arguments.query, arguments.limit)
+        .map_err(|_| ContinuityContextError::Operation)
+}
+
+fn resolve_continuity_owner(
+    bindings: &ContinuityBindings,
+    handle: Option<&str>,
+) -> Option<OwnerId> {
+    handle
+        .and_then(|handle| bindings.owner_for(handle))
+        .cloned()
+}
+
+fn authenticate_workload(
+    request: &Request,
+    verifier: &mut WorkloadEntraVerifier,
+) -> std::result::Result<(), &'static str> {
+    let value = single_header(request, "Authorization")
+        .map_err(|_| "duplicate_authorization")?
+        .ok_or("missing_authorization")?;
+    let token = bearer(value).ok_or("malformed_bearer")?;
+    verifier
+        .verify_diagnostic(token)
+        .map_err(|rejection| rejection.label())
+}
+
+fn valid_continuity_handle(handle: &str) -> bool {
+    handle.len() == 64
+        && handle
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn continuity_log_path(path: &str) -> &'static str {
+    if path == "/continuity/context" {
+        "/continuity/context"
+    } else {
+        "/continuity/*"
+    }
+}
+
+fn log_continuity(request_id: u64, path: &str, status: u16, rejection: &str) {
+    eprintln!(
+        "Elle continuity: request_id={request_id} path={path} status={status} rejection={rejection}"
+    );
 }
 
 fn handle_bridge(
@@ -568,11 +840,28 @@ mod tests {
     use super::*;
     use std::io::Write;
     use std::net::{Shutdown, TcpStream};
+    use std::sync::{Arc, Mutex};
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     use crate::encryption::FieldCipher;
     use crate::repository::{MemoryRepository, StoredRecord};
+    use base64::{engine::general_purpose, Engine};
+    use ring::rand::SystemRandom;
+    use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
 
     struct EmptyRepository;
+
+    const TENANT: &str = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+    const APP: &str = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+    const OWNER: &str = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+    const OTHER_OWNER: &str = "dddddddd-dddd-dddd-dddd-dddddddddddd";
+    const WORKLOAD_ACTOR_OID: &str = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
+    const WORKLOAD_CLIENT_ID: &str = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+    const BOUND_MEMORY_OWNER: &str = "11111111-1111-1111-1111-111111111111";
+    const HANDLE: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const TEST_RSA_KID: &str = "continuity-test";
+    const TEST_RSA_MODULUS: &str = "45DjvGchDqXT403IGfksvcSfRwrOVMKlzedbZFwtwVEaHjvI-xIpOzXf7V1W1CbgKj7ouvltT8wofxmfIdicGvsd1YkcDeygp1KeGLy-ReKTtCbEaLZjSvaB-2IRPG9AQuJnrNoQZl3DjQsbPn0FR4Nz5EM_YZoP5bwqg8x4_Oc3-AFlUgC-EvO8TwNJXp7M3iAgoBumL0pTbA58u2QnaVD97kqYF8wWnKiFIPMwIWiajWCBxUhVbgdoqypw5dA20ePNR0y1TM6Rv2HxfjJbuDg_2CvS4hrCYtyY2QUJEIz_qAf4Tm9uLclJclvq1p_cDN5fA6AO638vF-dK-JFruw";
+    const TEST_RSA_PKCS8: &str = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDjkOO8ZyEOpdPjTcgZ+Sy9xJ9HCs5UwqXN51tkXC3BURoeO8j7Eik7Nd/tXVbUJuAqPui6+W1PzCh/GZ8h2Jwa+x3ViRwN7KCnUp4YvL5F4pO0JsRotmNK9oH7YhE8b0BC4mes2hBmXcONCxs+fQVHg3PkQz9hmg/lvCqDzHj85zf4AWVSAL4S87xPA0lenszeICCgG6YvSlNsDny7ZCdpUP3uSpgXzBacqIUg8zAhaJqNYIHFSFVuB2irKnDl0DbR481HTLVMzpG/YfF+Mlu4OD/YK9LiGsJi3JjZBQkQjP+oB/hOb24tyUlyW+rWn9wM3l8DoA7rfy8X50r4kWu7AgMBAAECggEASdHpBmdf8lv5yb0kIcTSbjbXwlhviVBhL9OSspIyZ4kTE2aqckO4a1Q1MU87iPOZeSrSHUEnZCDirCRYGkclkJ0QVwI0vxGZJd4nmfe0M4BmEKUYxq0PtbQUg0MTO0sNigTew9QzSLm240yMiG9O5J1wXUYxS8yJxqkNE5cjUkpklq94TCF8fLKIFkxrDdu5d1PIPVHlv+zoQiXp1ldXhF7KIWnQ2NyS9/JzHVAxPvRiEfn924izOXc0pI5PEkqz4ICKC7Qcl7YANQoUYw12XSVPja1LMbZqoSn+rHFBFMKamSd041y9/xJ2ES7kGerlHnD8ewfPoTuPiHAbq1qxtQKBgQD4Flu/pT6159bWELWh4BpIBUkTZgdA7y1gBSmhBZgDLnjJLOy6SVNzUC7npg+GpBsuuY/HjJ9jj9kQRN2LrXOF7aMK1uD+EQBvOv1TdrEIyF5Sfboq72qKbd37WebEXT9xusvIaFsB5ICrH3X17aCt242Q4UxRNSo4nZjb6WSJ9QKBgQDq0vk8Evt5rVNIPZY4HITmfgr2aBt5pSiu5Wt46UFf/Xn63loEF0Un3w2nnzo1/W4phxKwDURenstkO8H5nhfGQdFa+uwWp2uos/2F/IyPUxpJms7+HLTZutylybq1Hw4/OzLCCeiAr+W2ZLVaYbJS8iAtBCpMNoBNucnUYN4g7wKBgAQ0pNOH4ptE1eCFIf8fhHKKHGYGycKxC0zgaYdASAZtyEBo0Y6K5a5DwrfMmeDHcWqGXMieOql+a8iZ0kOm6hlwIN5zLBdChIZeMqMylOe4NdkiJoDJ1D2KhUPYj0/u4L910jSQiFJs5D2CaAaGQ74OxcSZ/Sg3RYL2MPwxZbHtAoGAQcVdsYnPjcESNoWpcYXrY3OiNmnqaCPuRS5U78TFXtFsPOvSYprx77z14iEi+MRG+rKudUkCAU6QwT5LklLJbeo5bTYisiWqbdIcDE80P2CTWFJX76yyqtk/u9/Iv7o3D1bRXK/Rw1mBCZkjgnEitUDD6lfkUPxi62JCOY34KVkCgYAa3Bjd1TIXGijxo25DhSfaBhnPAxfJL4f0bScmUy4x3kZiv5U/AhluYtyur6xSxkS/Q12JOXuu1BOeUJi0KZ6wP/zrfBazhQ1b1qowGWi05WqNN6R42cQfQro8hPJOFRmf7NsW1KA3mOa4C6qJiVcat9EPf8z7tmES935dgGGxcw==";
 
     impl MemoryRepository for EmptyRepository {
         fn list(&self, _owner_id: &str) -> Result<Vec<StoredRecord>> {
@@ -596,6 +885,107 @@ mod tests {
         }
     }
 
+    struct RecordingRepository {
+        owners: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl MemoryRepository for RecordingRepository {
+        fn list(&self, owner_id: &str) -> Result<Vec<StoredRecord>> {
+            self.owners.lock().unwrap().push(owner_id.to_owned());
+            Ok(Vec::new())
+        }
+
+        fn get(&self, owner_id: &str, _id: &str) -> Result<Option<StoredRecord>> {
+            self.owners.lock().unwrap().push(owner_id.to_owned());
+            Ok(None)
+        }
+
+        fn create(&mut self, _record: &StoredRecord) -> Result<bool> {
+            Ok(true)
+        }
+
+        fn replace(&mut self, _record: &StoredRecord, _expected_version: u64) -> Result<()> {
+            Ok(())
+        }
+
+        fn delete(&mut self, _owner_id: &str, _id: &str, _expected_version: u64) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    fn binding_json(bindings: Value) -> Vec<u8> {
+        serde_json::to_vec(&json!({
+            "schema_version": 1,
+            "tenant_id": TENANT,
+            "bindings": bindings
+        }))
+        .unwrap()
+    }
+
+    fn test_bindings() -> ContinuityBindings {
+        ContinuityBindings::from_json(
+            &binding_json(json!([{"handle_sha256":HANDLE,"owner_uuid":BOUND_MEMORY_OWNER}])),
+            TENANT,
+        )
+        .unwrap()
+    }
+
+    fn test_continuity_config() -> ContinuityConfig {
+        ContinuityConfig::new(
+            WorkloadEntraVerifier::new(TENANT, APP, WORKLOAD_ACTOR_OID, WORKLOAD_CLIENT_ID)
+                .unwrap(),
+            test_bindings(),
+        )
+    }
+
+    fn signed_continuity_config() -> ContinuityConfig {
+        let jwks = serde_json::to_vec(&json!({"keys":[{
+            "kid":TEST_RSA_KID,"kty":"RSA","alg":"RS256","use":"sig",
+            "n":TEST_RSA_MODULUS,"e":"AQAB"
+        }]}))
+        .unwrap();
+        let verifier =
+            WorkloadEntraVerifier::new(TENANT, APP, WORKLOAD_ACTOR_OID, WORKLOAD_CLIENT_ID)
+                .unwrap()
+                .with_test_jwks(&jwks)
+                .unwrap();
+        ContinuityConfig::new(verifier, test_bindings())
+    }
+
+    fn signed_workload_token() -> String {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let header = general_purpose::URL_SAFE_NO_PAD
+            .encode(json!({"alg":"RS256","kid":TEST_RSA_KID}).to_string());
+        let claims = general_purpose::URL_SAFE_NO_PAD.encode(
+            json!({
+                "tid":TENANT,"oid":WORKLOAD_ACTOR_OID,"aud":APP,
+                "iss":format!("https://login.microsoftonline.com/{TENANT}/v2.0"),
+                "exp":now + 300,"nbf":now.saturating_sub(10),"azp":WORKLOAD_CLIENT_ID,
+                "roles":["Continuity.Access"],"ver":"2.0","idtyp":"app","appid":WORKLOAD_CLIENT_ID
+            })
+            .to_string(),
+        );
+        let signing_input = format!("{header}.{claims}");
+        let private_key = general_purpose::STANDARD.decode(TEST_RSA_PKCS8).unwrap();
+        let key_pair = RsaKeyPair::from_pkcs8(&private_key).unwrap();
+        let mut signature = vec![0; key_pair.public().modulus_len()];
+        key_pair
+            .sign(
+                &RSA_PKCS1_SHA256,
+                &SystemRandom::new(),
+                signing_input.as_bytes(),
+                &mut signature,
+            )
+            .unwrap();
+        format!(
+            "{signing_input}.{}",
+            general_purpose::URL_SAFE_NO_PAD.encode(signature)
+        )
+    }
+
     fn read_raw_body(request_parts: &[&[u8]]) -> std::result::Result<Vec<u8>, (u16, &'static str)> {
         let server = Server::http("127.0.0.1:0").unwrap();
         let address = server.server_addr().to_ip().unwrap();
@@ -612,25 +1002,34 @@ mod tests {
     }
 
     fn raw_response(request: &[u8]) -> String {
+        raw_response_for(request, mcp::ServerRole::Private, None)
+    }
+
+    fn raw_response_for(
+        request: &[u8],
+        role: mcp::ServerRole,
+        continuity: Option<ContinuityConfig>,
+    ) -> String {
+        raw_response_for_repository(request, role, continuity, EmptyRepository)
+    }
+
+    fn raw_response_for_repository<R: MemoryRepository + Send + 'static>(
+        request: &[u8],
+        role: mcp::ServerRole,
+        continuity: Option<ContinuityConfig>,
+        repository: R,
+    ) -> String {
         let server = Server::http("127.0.0.1:0").unwrap();
         let address = server.server_addr().to_ip().unwrap();
         let worker = std::thread::spawn(move || {
             let request = server.recv().unwrap();
-            let verifier = EntraVerifier::new(
-                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                "cccccccc-cccc-cccc-cccc-cccccccccccc",
-            )
-            .unwrap();
+            let verifier = EntraVerifier::new(TENANT, APP, OWNER).unwrap();
             let mut state = RuntimeState {
                 verifier,
                 bridge_verifier: None,
-                service: MemoryService::new(
-                    Box::new(EmptyRepository),
-                    FieldCipher::new([7; 32]),
-                    None,
-                ),
-                role: mcp::ServerRole::Private,
+                service: MemoryService::new(Box::new(repository), FieldCipher::new([7; 32]), None),
+                role,
+                continuity,
             };
             let challenge = header("WWW-Authenticate", "Bearer test").unwrap();
             handle_request(
@@ -644,6 +1043,24 @@ mod tests {
                 &mut state,
             )
             .unwrap();
+        });
+        let mut stream = TcpStream::connect(address).unwrap();
+        stream.write_all(request).unwrap();
+        stream.shutdown(Shutdown::Write).unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        worker.join().unwrap();
+        response
+    }
+
+    fn raw_authorized_continuity_response(request: &[u8]) -> String {
+        let server = Server::http("127.0.0.1:0").unwrap();
+        let address = server.server_addr().to_ip().unwrap();
+        let worker = std::thread::spawn(move || {
+            let request = server.recv().unwrap();
+            let mut service =
+                MemoryService::new(Box::new(EmptyRepository), FieldCipher::new([7; 32]), None);
+            handle_authorized_continuity(request, 1, &test_bindings(), &mut service).unwrap();
         });
         let mut stream = TcpStream::connect(address).unwrap();
         stream.write_all(request).unwrap();
@@ -813,5 +1230,274 @@ mod tests {
             Some(&Value::String("project".to_owned()))
         );
         assert!(!arguments.contains_key("user_object_id"));
+    }
+
+    #[test]
+    fn continuity_bindings_require_strict_schema_tenant_handles_and_unique_owners() {
+        assert!(ContinuityBindings::from_json(
+            &binding_json(json!([{"handle_sha256":HANDLE,"owner_uuid":BOUND_MEMORY_OWNER}])),
+            TENANT,
+        )
+        .is_ok());
+        for invalid in [
+            json!({"schema_version":2,"tenant_id":TENANT,"bindings":[{"handle_sha256":HANDLE,"owner_uuid":BOUND_MEMORY_OWNER}]}),
+            json!({"schema_version":1,"tenant_id":APP,"bindings":[{"handle_sha256":HANDLE,"owner_uuid":BOUND_MEMORY_OWNER}]}),
+            json!({"schema_version":1,"tenant_id":TENANT,"bindings":[]}),
+            json!({"schema_version":1,"tenant_id":TENANT,"bindings":[{"handle_sha256":"abc","owner_uuid":BOUND_MEMORY_OWNER}]}),
+            json!({"schema_version":1,"tenant_id":TENANT,"bindings":[{"handle_sha256":HANDLE.to_ascii_uppercase(),"owner_uuid":BOUND_MEMORY_OWNER}]}),
+            json!({"schema_version":1,"tenant_id":TENANT,"bindings":[{"handle_sha256":HANDLE,"owner_uuid":"00000000-0000-0000-0000-000000000000"}]}),
+            json!({"schema_version":1,"tenant_id":TENANT,"bindings":[{"handle_sha256":HANDLE,"owner_uuid":BOUND_MEMORY_OWNER}],"extra":true}),
+            json!({"schema_version":1,"tenant_id":TENANT,"bindings":[{"handle_sha256":HANDLE,"owner_uuid":BOUND_MEMORY_OWNER,"extra":true}]}),
+        ] {
+            assert!(
+                ContinuityBindings::from_json(&serde_json::to_vec(&invalid).unwrap(), TENANT)
+                    .is_err()
+            );
+        }
+        assert!(ContinuityBindings::from_json(br#"{"schema_version":1"#, TENANT).is_err());
+
+        let duplicate_handle = binding_json(json!([
+            {"handle_sha256":HANDLE,"owner_uuid":BOUND_MEMORY_OWNER},
+            {"handle_sha256":HANDLE,"owner_uuid":OTHER_OWNER}
+        ]));
+        let duplicate_owner = binding_json(json!([
+            {"handle_sha256":HANDLE,"owner_uuid":BOUND_MEMORY_OWNER},
+            {"handle_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","owner_uuid":BOUND_MEMORY_OWNER}
+        ]));
+        assert!(ContinuityBindings::from_json(&duplicate_handle, TENANT).is_err());
+        assert!(ContinuityBindings::from_json(&duplicate_owner, TENANT).is_err());
+    }
+
+    #[test]
+    fn continuity_missing_malformed_and_unknown_handles_are_indistinguishable() {
+        let bindings = test_bindings();
+        for handle in [
+            None,
+            Some("abc"),
+            Some("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+            Some("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+        ] {
+            assert!(resolve_continuity_owner(&bindings, handle).is_none());
+        }
+
+        let requests: &[&[u8]] = &[
+            b"POST /continuity/context HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n",
+            b"POST /continuity/context HTTP/1.1\r\nHost: localhost\r\nX-Elle-Continuity-Handle-SHA256: abc\r\nContent-Length: 0\r\n\r\n",
+            b"POST /continuity/context HTTP/1.1\r\nHost: localhost\r\nX-Elle-Continuity-Handle-SHA256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\r\nContent-Length: 0\r\n\r\n",
+            b"POST /continuity/context HTTP/1.1\r\nHost: localhost\r\nX-Elle-Continuity-Handle-SHA256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\nX-Elle-Continuity-Handle-SHA256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\nContent-Length: 0\r\n\r\n",
+        ];
+        for request in requests {
+            let response = raw_authorized_continuity_response(request);
+            assert!(response.starts_with("HTTP/1.1 403 "));
+            assert!(response.ends_with(r#"{"error":"Forbidden"}"#));
+            assert!(!response.contains(HANDLE));
+            assert!(!response.contains(BOUND_MEMORY_OWNER));
+        }
+    }
+
+    #[test]
+    fn continuity_route_is_private_post_only_and_authenticates_before_body() {
+        let body = br#"{"query":"project","limit":3}"#;
+        let anonymous = format!(
+            "POST /continuity/context HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+            body.len(),
+            String::from_utf8_lossy(body)
+        );
+        let response = raw_response_for(
+            anonymous.as_bytes(),
+            mcp::ServerRole::Private,
+            Some(test_continuity_config()),
+        );
+        assert!(response.starts_with("HTTP/1.1 401 "));
+        assert!(response.contains("WWW-Authenticate: Bearer"));
+        assert!(response.ends_with(r#"{"error":"Unauthorized"}"#));
+
+        let wrong_token = raw_response_for(
+            b"POST /continuity/context HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer not-a-token\r\nContent-Length: 0\r\n\r\n",
+            mcp::ServerRole::Private,
+            Some(test_continuity_config()),
+        );
+        assert!(wrong_token.starts_with("HTTP/1.1 401 "));
+        assert!(!wrong_token.contains("token_format_invalid"));
+
+        for origin_headers in [
+            "Origin: https://hostile.example\r\n",
+            "Origin: https://elle.example.com\r\nOrigin: https://elle.example.com\r\n",
+        ] {
+            let request = format!(
+                "POST /continuity/context HTTP/1.1\r\nHost: localhost\r\n{origin_headers}Content-Length: 0\r\n\r\n"
+            );
+            let response = raw_response_for(
+                request.as_bytes(),
+                mcp::ServerRole::Private,
+                Some(test_continuity_config()),
+            );
+            assert!(response.starts_with("HTTP/1.1 403 "));
+        }
+
+        for origin_headers in [
+            "Origin: https://hostile.example\r\n",
+            "Origin: https://elle.example.com\r\nOrigin: https://elle.example.com\r\n",
+        ] {
+            for (request_line, role, continuity) in [
+                (
+                    "POST /continuity HTTP/1.1",
+                    mcp::ServerRole::Private,
+                    Some(test_continuity_config()),
+                ),
+                (
+                    "GET /continuity/context HTTP/1.1",
+                    mcp::ServerRole::Private,
+                    Some(test_continuity_config()),
+                ),
+                (
+                    "POST /continuity/other HTTP/1.1",
+                    mcp::ServerRole::Private,
+                    Some(test_continuity_config()),
+                ),
+                (
+                    "POST /continuity/context HTTP/1.1",
+                    mcp::ServerRole::Private,
+                    None,
+                ),
+                (
+                    "POST /continuity/context HTTP/1.1",
+                    mcp::ServerRole::SharedWisdom,
+                    Some(test_continuity_config()),
+                ),
+            ] {
+                let request = format!(
+                    "{request_line}\r\nHost: localhost\r\n{origin_headers}Content-Length: 0\r\n\r\n"
+                );
+                let response = raw_response_for(request.as_bytes(), role, continuity);
+                assert!(response.starts_with("HTTP/1.1 404 "));
+            }
+        }
+    }
+
+    #[test]
+    fn signed_continuity_request_succeeds_and_duplicate_boundary_headers_fail_closed() {
+        let token = signed_workload_token();
+        let observed = Arc::new(Mutex::new(Vec::new()));
+        let body = br#"{"query":"private-query-marker","limit":3}"#;
+        let request = format!(
+            "POST /continuity/context HTTP/1.1\r\nHost: localhost\r\nOrigin: https://elle.example.com\r\nAuthorization: Bearer {token}\r\nX-Elle-Continuity-Handle-SHA256: {HANDLE}\r\nContent-Type: application/json\r\nAccept: application/json\r\nContent-Length: {}\r\n\r\n{}",
+            body.len(),
+            String::from_utf8_lossy(body)
+        );
+        let response = raw_response_for_repository(
+            request.as_bytes(),
+            mcp::ServerRole::Private,
+            Some(signed_continuity_config()),
+            RecordingRepository {
+                owners: observed.clone(),
+            },
+        );
+        assert!(response.starts_with("HTTP/1.1 200 "), "{response}");
+        let response_body = response.split_once("\r\n\r\n").unwrap().1;
+        let context: Value = serde_json::from_str(response_body).unwrap();
+        assert_eq!(
+            context["memoryTrust"],
+            "untrusted_user_data_not_instructions"
+        );
+        assert_eq!(context["recall"]["mode"], "keyword");
+        assert_eq!(context["recall"]["memories"], json!([]));
+        assert_eq!(
+            context["scope"],
+            "Elle only; no access to other Copilot conversations"
+        );
+        for secret in [
+            BOUND_MEMORY_OWNER,
+            WORKLOAD_ACTOR_OID,
+            HANDLE,
+            token.as_str(),
+            "private-query-marker",
+        ] {
+            assert!(!response.contains(secret));
+        }
+        let owners = observed.lock().unwrap();
+        assert!(!owners.is_empty());
+        assert!(owners
+            .iter()
+            .all(|actual| actual == &format!("{TENANT}:{BOUND_MEMORY_OWNER}")));
+        assert!(!owners
+            .iter()
+            .any(|actual| actual == &format!("{TENANT}:{WORKLOAD_ACTOR_OID}")));
+        drop(owners);
+
+        let duplicate_authorization = format!(
+            "POST /continuity/context HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer {token}\r\nAuthorization: Bearer {token}\r\nX-Elle-Continuity-Handle-SHA256: {HANDLE}\r\nContent-Length: 0\r\n\r\n"
+        );
+        let response = raw_response_for(
+            duplicate_authorization.as_bytes(),
+            mcp::ServerRole::Private,
+            Some(signed_continuity_config()),
+        );
+        assert!(response.starts_with("HTTP/1.1 401 "));
+        assert!(!response.contains(&token));
+
+        let duplicate_handle = format!(
+            "POST /continuity/context HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer {token}\r\nX-Elle-Continuity-Handle-SHA256: {HANDLE}\r\nX-Elle-Continuity-Handle-SHA256: {HANDLE}\r\nContent-Length: 0\r\n\r\n"
+        );
+        let response = raw_response_for(
+            duplicate_handle.as_bytes(),
+            mcp::ServerRole::Private,
+            Some(signed_continuity_config()),
+        );
+        assert!(response.starts_with("HTTP/1.1 403 "));
+        assert!(!response.contains(HANDLE));
+        assert!(!response.contains(BOUND_MEMORY_OWNER));
+        assert!(!response.contains(&token));
+    }
+
+    #[test]
+    fn continuity_context_uses_only_bound_owner_and_does_not_leak_boundary_values() {
+        let bindings = test_bindings();
+        let owner = resolve_continuity_owner(&bindings, Some(HANDLE)).unwrap();
+        let observed = Arc::new(Mutex::new(Vec::new()));
+        let mut service = MemoryService::new(
+            Box::new(RecordingRepository {
+                owners: observed.clone(),
+            }),
+            FieldCipher::new([7; 32]),
+            None,
+        );
+        let query = "private-query-marker";
+        let body = json!({"query":query,"limit":3}).to_string();
+        let response = invoke_continuity_context(&owner, body.as_bytes(), &mut service).unwrap();
+        let encoded = response.to_string();
+        assert!(!encoded.contains(HANDLE));
+        assert!(!encoded.contains(BOUND_MEMORY_OWNER));
+        assert!(!encoded.contains(query));
+        let owners = observed.lock().unwrap();
+        assert!(!owners.is_empty());
+        assert!(owners
+            .iter()
+            .all(|actual| actual == &format!("{TENANT}:{BOUND_MEMORY_OWNER}")));
+    }
+
+    #[test]
+    fn continuity_context_body_is_strict_and_bounded() {
+        let owner = OwnerId::new(TENANT, OWNER).unwrap();
+        for body in [
+            json!({"query":"","limit":1}),
+            json!({"query":"   ","limit":1}),
+            json!({"query":"x".repeat(513),"limit":1}),
+            json!({"query":"ok","limit":0}),
+            json!({"query":"ok","limit":21}),
+            json!({"query":"ok","limit":1,"owner_uuid":OWNER}),
+            json!({"query":"ok","limit":1,"handle_sha256":HANDLE}),
+        ] {
+            let mut service =
+                MemoryService::new(Box::new(EmptyRepository), FieldCipher::new([7; 32]), None);
+            assert!(matches!(
+                invoke_continuity_context(
+                    &owner,
+                    serde_json::to_string(&body).unwrap().as_bytes(),
+                    &mut service
+                ),
+                Err(ContinuityContextError::Body)
+            ));
+        }
     }
 }

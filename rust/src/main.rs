@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
 
-use elle::auth::EntraVerifier;
+use elle::auth::{EntraVerifier, WorkloadEntraVerifier};
 use elle::azure::{CosmosRepository, FoundryClient, ManagedIdentityCredential};
 use elle::encryption::FieldCipher;
 use elle::error::{Error, Result};
@@ -131,14 +131,14 @@ fn run() -> Result<()> {
             )?),
             _ => None,
         };
+        let continuity = continuity_config(role, &tenant, &audience)?;
         return elle::server::serve(
             "0.0.0.0:8080",
             &origin,
             verifier,
-            bridge_verifier,
             service,
             role,
-            bridge_policy,
+            elle::server::RuntimeConfig::new(bridge_verifier, bridge_policy, continuity),
         );
     }
 
@@ -319,6 +319,62 @@ fn required(name: &'static str) -> Result<String> {
         .ok_or(Error::Configuration(name))
 }
 
+fn continuity_config(
+    role: mcp::ServerRole,
+    tenant_id: &str,
+    audience: &str,
+) -> Result<Option<elle::server::ContinuityConfig>> {
+    if role != mcp::ServerRole::Private {
+        return Ok(None);
+    }
+    let bindings_file = optional("ELLE_CONTINUITY_BINDINGS_FILE")?;
+    let actor_id = optional("ELLE_CONTINUITY_ACTOR_ID")?;
+    let client_id = optional("ELLE_CONTINUITY_CLIENT_ID")?;
+    continuity_config_from_values(
+        role,
+        tenant_id,
+        audience,
+        bindings_file,
+        actor_id,
+        client_id,
+    )
+}
+
+fn continuity_config_from_values(
+    role: mcp::ServerRole,
+    tenant_id: &str,
+    audience: &str,
+    bindings_file: Option<String>,
+    actor_id: Option<String>,
+    client_id: Option<String>,
+) -> Result<Option<elle::server::ContinuityConfig>> {
+    if role != mcp::ServerRole::Private {
+        return Ok(None);
+    }
+    match (bindings_file, actor_id, client_id) {
+        (None, None, None) => Ok(None),
+        (Some(bindings_file), Some(actor_id), Some(client_id)) => {
+            let verifier = WorkloadEntraVerifier::new(tenant_id, audience, &actor_id, &client_id)?;
+            let bindings =
+                elle::server::ContinuityBindings::from_file(Path::new(&bindings_file), tenant_id)?;
+            Ok(Some(elle::server::ContinuityConfig::new(
+                verifier, bindings,
+            )))
+        }
+        _ => Err(Error::Configuration(
+            "Continuity configuration must be complete",
+        )),
+    }
+}
+
+fn optional(name: &'static str) -> Result<Option<String>> {
+    match env::var(name) {
+        Ok(value) if !value.trim().is_empty() => Ok(Some(value)),
+        Err(env::VarError::NotPresent) => Ok(None),
+        _ => Err(Error::Configuration(name)),
+    }
+}
+
 fn read_archive(path: &Path) -> Result<Vec<u8>> {
     let file = fs::File::open(path).map_err(|_| Error::Storage("Cannot open backup file"))?;
     let mut bytes = Vec::new();
@@ -329,4 +385,78 @@ fn read_archive(path: &Path) -> Result<Vec<u8>> {
         return Err(Error::InvalidInput("Backup exceeds file size limit"));
     }
     Ok(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    const TENANT: &str = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+    const APP: &str = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+    const ACTOR: &str = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+    const OWNER: &str = "dddddddd-dddd-dddd-dddd-dddddddddddd";
+    const HANDLE: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+    #[test]
+    fn continuity_startup_is_private_and_all_or_nothing() {
+        assert!(matches!(
+            continuity_config_from_values(mcp::ServerRole::Private, TENANT, APP, None, None, None),
+            Ok(None)
+        ));
+        for values in [
+            (Some("bindings".to_owned()), None, None),
+            (None, Some(ACTOR.to_owned()), None),
+            (None, None, Some(APP.to_owned())),
+            (Some("bindings".to_owned()), Some(ACTOR.to_owned()), None),
+            (Some("bindings".to_owned()), None, Some(APP.to_owned())),
+            (None, Some(ACTOR.to_owned()), Some(APP.to_owned())),
+        ] {
+            assert!(continuity_config_from_values(
+                mcp::ServerRole::Private,
+                TENANT,
+                APP,
+                values.0,
+                values.1,
+                values.2
+            )
+            .is_err());
+        }
+        assert!(matches!(
+            continuity_config_from_values(
+                mcp::ServerRole::SharedWisdom,
+                TENANT,
+                APP,
+                Some("not-read".to_owned()),
+                Some(ACTOR.to_owned()),
+                Some(APP.to_owned())
+            ),
+            Ok(None)
+        ));
+    }
+
+    #[test]
+    fn complete_continuity_startup_loads_the_binding_file() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = env::temp_dir().join(format!("elle-continuity-{suffix}.json"));
+        let contents = serde_json::json!({
+            "schema_version":1,
+            "tenant_id":TENANT,
+            "bindings":[{"handle_sha256":HANDLE,"owner_uuid":OWNER}]
+        });
+        fs::write(&path, serde_json::to_vec(&contents).unwrap()).unwrap();
+        let result = continuity_config_from_values(
+            mcp::ServerRole::Private,
+            TENANT,
+            APP,
+            Some(path.to_string_lossy().into_owned()),
+            Some(ACTOR.to_owned()),
+            Some(APP.to_owned()),
+        );
+        fs::remove_file(path).unwrap();
+        assert!(matches!(result, Ok(Some(_))));
+    }
 }
