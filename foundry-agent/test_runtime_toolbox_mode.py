@@ -25,6 +25,10 @@ class ToolboxLifetimeTests(unittest.TestCase):
             agent = self.build_agent()
 
         self.assertIs(type(agent), RequestScopedToolboxAgent)
+        self.assertEqual(
+            [tool.name for tool in agent.default_options["tools"]],
+            ["elle_identity_status"],
+        )
         toolbox_type.assert_not_called()
 
     def test_explicit_request_scoped_is_request_scoped(self):
@@ -42,6 +46,10 @@ class ToolboxLifetimeTests(unittest.TestCase):
             agent = self.build_agent()
 
         self.assertIs(type(agent), Agent)
+        self.assertEqual(
+            [tool.name for tool in agent.default_options["tools"]],
+            ["elle_identity_status"],
+        )
         self.assertEqual(len(agent.mcp_tools), 1)
         self.assertIsInstance(agent.mcp_tools[0], runtime.FoundryToolbox)
 

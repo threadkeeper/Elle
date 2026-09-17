@@ -7,6 +7,7 @@ from agent_framework.foundry import FoundryChatClient
 from agent_framework_foundry_hosting import FoundryToolbox, ResponsesHostServer
 from azure.identity import DefaultAzureCredential
 
+from caller_identity import elle_identity_status
 from request_scoped_tools import RequestScopedToolboxAgent
 
 
@@ -29,11 +30,12 @@ def build_agent(*, client, credential, toolbox_url: str, name: str, instructions
     if lifetime == "request_scoped":
         return RequestScopedToolboxAgent(
             **options,
+            tools=[elle_identity_status],
             toolbox_factory=lambda: FoundryToolbox(credential, url=toolbox_url),
         )
     if lifetime == "long_lived":
         toolbox = FoundryToolbox(credential, url=toolbox_url)
-        return Agent(**options, tools=toolbox)
+        return Agent(**options, tools=[elle_identity_status, toolbox])
     raise ValueError(f"Unsupported ELLE_TOOLBOX_LIFETIME: {lifetime}")
 
 

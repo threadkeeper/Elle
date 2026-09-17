@@ -95,7 +95,7 @@ class DeploymentTests(unittest.TestCase):
         self.project.agents.update_details.assert_not_called()
         self.project.toolboxes.update.assert_not_called()
 
-    def test_staging_uses_long_lived_toolbox_for_demo_candidate(self):
+    def test_staging_uses_request_scoped_toolbox_for_identity_candidate(self):
         self.project.agents.create_version_from_code.return_value.version = "4"
         with patch.object(deploy, "wait_until_active"), patch.object(
             deploy, "package_source", return_value=(b"zip", "digest")
@@ -107,7 +107,7 @@ class DeploymentTests(unittest.TestCase):
         ]
         self.assertEqual(
             definition.environment_variables["ELLE_TOOLBOX_LIFETIME"],
-            "long_lived",
+            "request_scoped",
         )
 
     def test_promotion_preserves_channel_authentication(self):
@@ -138,6 +138,7 @@ class DeploymentTests(unittest.TestCase):
                 archive.namelist(),
                 [
                     "main.py",
+                    "caller_identity.py",
                     "request_scoped_tools.py",
                     "requirements.txt",
                     "instructions.txt",
@@ -145,6 +146,22 @@ class DeploymentTests(unittest.TestCase):
             )
             prompt = archive.read("instructions.txt").decode("utf-8")
             self.assertTrue(prompt.startswith("You are Elle."))
+            self.assertIn("Private memory, personality and Shared Wisdom writes through MCP are retired.", prompt)
+            self.assertIn("Never invoke an `elle_private` MCP source", prompt)
+            self.assertIn("When Work IQ is available", prompt)
+            self.assertIn("If Work IQ is not\n  available", prompt)
+            for retired_tool in (
+                "elle_context",
+                "elle_list_memories",
+                "elle_remember",
+                "elle_correct",
+                "elle_forget",
+                "elle_personality",
+                "elle_set_personality",
+                "elle_shared_wisdom",
+                "elle_contribute_wisdom",
+            ):
+                self.assertNotIn(retired_tool, prompt)
 
     def test_smoke_test_pins_session_and_stops_it(self):
         self.project.agents.create_session.return_value.agent_session_id = "candidate-session"

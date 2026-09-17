@@ -47,6 +47,7 @@ def package_source() -> tuple[bytes, str]:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.write(SOURCE / "main.py", "main.py")
+        archive.write(SOURCE / "caller_identity.py", "caller_identity.py")
         archive.write(SOURCE / "request_scoped_tools.py", "request_scoped_tools.py")
         archive.write(SOURCE / "requirements.txt", "requirements.txt")
         archive.writestr("instructions.txt", prompt_text())
@@ -125,8 +126,7 @@ def deploy(project: AIProjectClient, toolbox_version: str) -> str:
     created = project.agents.create_version_from_code(
         agent_name=AGENT_NAME,
         description=(
-            "Elle hosted companion with private continuity and governed "
-            "enterprise tools."
+            "Elle hosted identity diagnostic with governed enterprise tools."
         ),
         definition=HostedAgentDefinition(
             cpu="1",
@@ -138,7 +138,7 @@ def deploy(project: AIProjectClient, toolbox_version: str) -> str:
             ),
             environment_variables={
                 "AZURE_AI_MODEL_DEPLOYMENT_NAME": "model-router",
-                "ELLE_TOOLBOX_LIFETIME": "long_lived",
+                "ELLE_TOOLBOX_LIFETIME": "request_scoped",
                 "TOOLBOX_ENDPOINT": toolbox_endpoint,
             },
             protocol_versions=[
