@@ -95,6 +95,21 @@ class DeploymentTests(unittest.TestCase):
         self.project.agents.update_details.assert_not_called()
         self.project.toolboxes.update.assert_not_called()
 
+    def test_staging_uses_long_lived_toolbox_for_demo_candidate(self):
+        self.project.agents.create_version_from_code.return_value.version = "4"
+        with patch.object(deploy, "wait_until_active"), patch.object(
+            deploy, "package_source", return_value=(b"zip", "digest")
+        ):
+            deploy.deploy(self.project, "4")
+
+        definition = self.project.agents.create_version_from_code.call_args.kwargs[
+            "definition"
+        ]
+        self.assertEqual(
+            definition.environment_variables["ELLE_TOOLBOX_LIFETIME"],
+            "long_lived",
+        )
+
     def test_promotion_preserves_channel_authentication(self):
         before = self.endpoint.as_dict()
         deploy.promote(self.project, "4", "3")

@@ -2,6 +2,7 @@ import asyncio
 import os
 from pathlib import Path
 
+from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
 from agent_framework_foundry_hosting import FoundryToolbox, ResponsesHostServer
 from azure.identity import DefaultAzureCredential
@@ -15,6 +16,25 @@ def load_instructions() -> str:
     if not instructions:
         raise RuntimeError("instructions.txt is empty")
     return instructions
+
+
+def build_agent(*, client, credential, toolbox_url: str, name: str, instructions: str):
+    lifetime = os.environ.get("ELLE_TOOLBOX_LIFETIME", "request_scoped")
+    options = {
+        "name": name,
+        "client": client,
+        "instructions": instructions,
+        "default_options": {"store": False},
+    }
+    if lifetime == "request_scoped":
+        return RequestScopedToolboxAgent(
+            **options,
+            toolbox_factory=lambda: FoundryToolbox(credential, url=toolbox_url),
+        )
+    if lifetime == "long_lived":
+        toolbox = FoundryToolbox(credential, url=toolbox_url)
+        return Agent(**options, tools=toolbox)
+    raise ValueError(f"Unsupported ELLE_TOOLBOX_LIFETIME: {lifetime}")
 
 
 async def main() -> None:
@@ -34,12 +54,12 @@ async def main() -> None:
         model=model,
         credential=credential,
     )
-    agent = RequestScopedToolboxAgent(
+    agent = build_agent(
         name=os.environ.get("FOUNDRY_AGENT_NAME", "elle"),
         client=client,
         instructions=load_instructions(),
-        toolbox_factory=lambda: FoundryToolbox(credential, url=toolbox_url),
-        default_options={"store": False},
+        credential=credential,
+        toolbox_url=toolbox_url,
     )
 
     server = ResponsesHostServer(agent)

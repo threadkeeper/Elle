@@ -138,6 +138,7 @@ def deploy(project: AIProjectClient, toolbox_version: str) -> str:
             ),
             environment_variables={
                 "AZURE_AI_MODEL_DEPLOYMENT_NAME": "model-router",
+                "ELLE_TOOLBOX_LIFETIME": "long_lived",
                 "TOOLBOX_ENDPOINT": toolbox_endpoint,
             },
             protocol_versions=[
