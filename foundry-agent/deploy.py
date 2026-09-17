@@ -31,7 +31,7 @@ PROJECT_ENDPOINT = (
 )
 AGENT_NAME = "elle"
 TOOLBOX_NAME = "elle-tools"
-EXPECTED_TOOLBOX_VERSION = "3"
+SUPPORTED_TOOLBOX_VERSIONS = frozenset({"3", "4"})
 CONTINUITY_ENDPOINT = (
     "https://elle-private-vnet.yellowsky-9d92d540.swedencentral."
     "azurecontainerapps.io/continuity/context"
@@ -86,8 +86,11 @@ def deploy(
     toolbox_version: str,
     identity_binding_probe_nonce: str | None = None,
 ) -> str:
-    if not isinstance(toolbox_version, str) or toolbox_version != EXPECTED_TOOLBOX_VERSION:
-        raise ValueError("Continuity candidate requires toolbox version 3")
+    if (
+        not isinstance(toolbox_version, str)
+        or toolbox_version not in SUPPORTED_TOOLBOX_VERSIONS
+    ):
+        raise ValueError("Staging requires toolbox version 3 or 4")
     endpoint = project.agents.get(AGENT_NAME).agent_endpoint
     if endpoint is None or endpoint.version_selector is None:
         raise RuntimeError("Pin live traffic to a version before staging")
@@ -101,11 +104,16 @@ def deploy(
     )
     environment_variables = {
         "AZURE_AI_MODEL_DEPLOYMENT_NAME": "model-router",
-        "ELLE_CONTINUITY_ENDPOINT": CONTINUITY_ENDPOINT,
-        "ELLE_CONTINUITY_SCOPE": CONTINUITY_SCOPE,
         "ELLE_TOOLBOX_LIFETIME": "request_scoped",
         "TOOLBOX_ENDPOINT": toolbox_endpoint,
     }
+    if toolbox_version == "3":
+        environment_variables.update(
+            {
+                "ELLE_CONTINUITY_ENDPOINT": CONTINUITY_ENDPOINT,
+                "ELLE_CONTINUITY_SCOPE": CONTINUITY_SCOPE,
+            }
+        )
     if identity_binding_probe_nonce is not None:
         if not _PROBE_NONCE_PATTERN.fullmatch(identity_binding_probe_nonce):
             raise ValueError("Identity binding probe nonce must be safe bounded ASCII")
@@ -207,8 +215,11 @@ def main() -> None:
         args.toolbox_version or args.identity_binding_probe_nonce
     ):
         parser.error("Testing/promotion cannot be combined with staging options")
-    if args.toolbox_version and args.toolbox_version != EXPECTED_TOOLBOX_VERSION:
-        parser.error("Staging requires --toolbox-version 3")
+    if (
+        args.toolbox_version
+        and args.toolbox_version not in SUPPORTED_TOOLBOX_VERSIONS
+    ):
+        parser.error("Staging requires --toolbox-version 3 or 4")
     if args.identity_binding_probe_nonce and not args.toolbox_version:
         parser.error("Identity binding probe staging requires --toolbox-version")
     if not (args.promote_version or args.test_version or args.toolbox_version):
