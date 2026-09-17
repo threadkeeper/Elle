@@ -119,19 +119,11 @@ impl EntraVerifier {
                 "Entra tenant, audience and allowed object ID must be nonzero UUIDs",
             ));
         }
-        Ok(Self {
-            tenant_id: tenant_id.to_owned(),
-            audience: audience.to_owned(),
-            allowed_object_ids: Some(BTreeSet::from([allowed_object_id.to_owned()])),
-            authority: format!("https://login.microsoftonline.com/{tenant_id}/v2.0"),
-            keys: Vec::new(),
-            fetched_at: None,
-            last_attempt: None,
-            agent: ureq::AgentBuilder::new()
-                .timeout(Duration::from_secs(10))
-                .redirects(0)
-                .build(),
-        })
+        Self::configured(
+            tenant_id,
+            audience,
+            Some(BTreeSet::from([allowed_object_id.to_owned()])),
+        )
     }
 
     /// Verify delegated users from an explicit allow-list in one tenant.
@@ -169,7 +161,12 @@ impl EntraVerifier {
         Ok(Self {
             tenant_id: tenant_id.to_owned(),
             audience: audience.to_owned(),
-            allowed_object_ids,
+            allowed_object_ids: allowed_object_ids.map(|object_ids| {
+                object_ids
+                    .into_iter()
+                    .map(|object_id| object_id.to_ascii_lowercase())
+                    .collect()
+            }),
             authority: format!("https://login.microsoftonline.com/{tenant_id}/v2.0"),
             keys: Vec::new(),
             fetched_at: None,
@@ -266,7 +263,7 @@ impl EntraVerifier {
         if self
             .allowed_object_ids
             .as_ref()
-            .is_some_and(|allowed| !allowed.contains(&claims.oid))
+            .is_some_and(|allowed| !allowed.contains(&claims.oid.to_ascii_lowercase()))
         {
             return Err(AuthRejection::OwnerNotAllowed);
         }
@@ -595,6 +592,39 @@ mod tests {
             .unwrap();
             assert_eq!(verifier.validate_claims(&claims, 1000).is_ok(), accepted);
         }
+    }
+
+    #[test]
+    fn owner_allowlist_matching_is_case_insensitive_and_returns_canonical_owner() {
+        let uppercase_owner = "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC";
+        let verifier = EntraVerifier::new(TENANT, APP, OWNER).unwrap();
+        let uppercase_claim: Claims = serde_json::from_value(json!({
+            "tid":TENANT,"oid":uppercase_owner,"aud":APP,"iss":verifier.authority(),
+            "exp":1100,"nbf":900,"scp":"access_as_user"
+        }))
+        .unwrap();
+        let owner = verifier.validate_claims(&uppercase_claim, 1000).unwrap();
+        assert_eq!(owner.as_str(), format!("{TENANT}:{OWNER}"));
+
+        let verifier =
+            EntraVerifier::for_users(TENANT, APP, &[uppercase_owner.to_owned()]).unwrap();
+        let lowercase_claim: Claims = serde_json::from_value(json!({
+            "tid":TENANT,"oid":OWNER,"aud":APP,"iss":verifier.authority(),
+            "exp":1100,"nbf":900,"scp":"access_as_user"
+        }))
+        .unwrap();
+        let owner = verifier.validate_claims(&lowercase_claim, 1000).unwrap();
+        assert_eq!(owner.as_str(), format!("{TENANT}:{OWNER}"));
+
+        let different_claim: Claims = serde_json::from_value(json!({
+            "tid":TENANT,"oid":"dddddddd-dddd-dddd-dddd-dddddddddddd","aud":APP,
+            "iss":verifier.authority(),"exp":1100,"nbf":900,"scp":"access_as_user"
+        }))
+        .unwrap();
+        assert_eq!(
+            verifier.validate_claims(&different_claim, 1000),
+            Err(AuthRejection::OwnerNotAllowed)
+        );
     }
 
     #[test]
