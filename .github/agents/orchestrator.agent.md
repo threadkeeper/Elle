@@ -2,7 +2,7 @@
 name: project-orchestrator
 description: Coordinate Elle architecture, implementation, testing, review, and gated release.
 target: vscode
-tools: ['agent', 'read', 'search', 'edit', 'execute']
+tools: [execute, read, agent, edit, search, browser]
 agents: ['architect', 'developer', 'tester', 'reviewer']
 user-invocable: true
 disable-model-invocation: true

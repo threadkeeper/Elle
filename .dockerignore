@@ -1,4 +1,13 @@
 **
+!Dockerfile
+!.cargo/
+!.cargo/**
+!rust/Cargo.toml
+!rust/Cargo.lock
+!rust/src/
+!rust/src/**
+!app/wisdom/catalog.json
+!app/demo/synthetic-history.json**
 !rust/
 !rust/Cargo.toml
 !rust/Cargo.lock

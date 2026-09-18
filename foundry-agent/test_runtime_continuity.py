@@ -547,44 +547,36 @@ class ContinuityRuntimeTests(unittest.TestCase):
             any(isinstance(handler, continuity._NoRedirectHandler) for handler in handlers)
         )
 
-    def test_runtime_registers_recall_in_request_scoped_mode(self):
+    def test_runtime_registers_direct_private_tools_and_recall(self):
         environment = {
             "ELLE_CONTINUITY_ENDPOINT": ENDPOINT,
             "ELLE_CONTINUITY_SCOPE": SCOPE,
-            "ELLE_TOOLBOX_LIFETIME": "request_scoped",
         }
         with patch.dict("os.environ", environment, clear=True):
             agent = runtime.build_agent(
                 client=object(),
                 credential=self.credential,
-                toolbox_url="https://toolbox.example.test/mcp",
                 name="elle",
                 instructions="Test instructions",
             )
         self.assertEqual(
             [tool.name for tool in agent.default_options["tools"]],
-            ["elle_identity_status", "elle_recall_continuity"],
+            [
+                "elle_identity_status",
+                "elle_context",
+                "elle_list_memories",
+                "elle_remember",
+                "elle_correct",
+                "elle_forget",
+                "elle_personality",
+                "elle_set_personality",
+                "elle_recall_continuity",
+            ],
         )
-
-    def test_runtime_registers_recall_in_long_lived_mode(self):
-        environment = {
-            "ELLE_CONTINUITY_ENDPOINT": ENDPOINT,
-            "ELLE_CONTINUITY_SCOPE": SCOPE,
-            "ELLE_TOOLBOX_LIFETIME": "long_lived",
-        }
-        with patch.dict("os.environ", environment, clear=True):
-            agent = runtime.build_agent(
-                client=object(),
-                credential=self.credential,
-                toolbox_url="https://toolbox.example.test/mcp",
-                name="elle",
-                instructions="Test instructions",
-            )
+        self.assertEqual(len(agent.agent_middleware), 1)
         self.assertEqual(
-            [tool.name for tool in agent.default_options["tools"]],
-            ["elle_identity_status", "elle_recall_continuity"],
+            type(agent.agent_middleware[0]).__name__, "AutomaticTurnMemory"
         )
-        self.assertEqual(len(agent.mcp_tools), 1)
 
     def test_runtime_rejects_partial_continuity_configuration(self):
         with patch.dict(
@@ -593,7 +585,6 @@ class ContinuityRuntimeTests(unittest.TestCase):
             runtime.build_agent(
                 client=object(),
                 credential=self.credential,
-                toolbox_url="https://toolbox.example.test/mcp",
                 name="elle",
                 instructions="Test instructions",
             )

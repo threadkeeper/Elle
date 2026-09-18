@@ -153,8 +153,8 @@ exit 2
         $calls = Get-AzCalls
         Assert-True (@($calls | Where-Object { $_ -match '^containerapp\s+update' }).Count -eq 2) 'Both should update two apps.'
         Assert-True (@($calls | Where-Object { $_ -match 'properties\.configuration\.ingress\.fqdn' }).Count -eq 2) 'Both should read two endpoints.'
-        Assert-True (($output -join "`n") -match 'endpoint\[Private\]=https://elle-private\.test\.azurecontainerapps\.io/mcp') 'Private endpoint evidence is missing.'
-        Assert-True (($output -join "`n") -match 'endpoint\[Wisdom\]=https://elle-wisdom\.test\.azurecontainerapps\.io/mcp') 'Wisdom endpoint evidence is missing.'
+        Assert-True (($output -join "`n") -match 'endpoint\[Private\]=https://elle-private\.test\.azurecontainerapps\.io/bridge/elle_context') 'Private endpoint evidence is missing.'
+        Assert-True (($output -join "`n") -match 'endpoint\[Wisdom\]=https://elle-wisdom\.test\.azurecontainerapps\.io/healthz') 'Wisdom endpoint evidence is missing.'
     }
 
     Invoke-Test 'Private requires an expected current image' {

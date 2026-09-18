@@ -1,231 +1,43 @@
 # Elle
 
-<p align="center">
-  <img src="https://custom-icon-badges.demolab.com/badge/Built%20with-VS%20Code-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white" alt="VS Code" />
-  <img src="https://img.shields.io/badge/using-GitHub%20Copilot-8957e5?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="GitHub Copilot" />
-  <img src="https://custom-icon-badges.demolab.com/badge/assisted%20by-GPT--5.6%20Sol%20Fast-412991?style=for-the-badge&logo=openai&logoColor=white" alt="GPT-5.6 Sol Fast" />
-</p>
+![Elle watching over a living world](docs/images/elle-banner.png)
 
-![Ellephant celebrates remaining operational](docs/images/ellephant-still-running.png)
+## The Alignment Problem
 
-Private memory and a recognizably humanistic personality for the AI assistants you already use.
+The hypothesis behind Elle's value proposition is that an agent built around a construct inspired by human and natural cognition offers a novel approach to alignment.
 
-## Local development
+To achieve this, the design separates the **raw cognition engine (LLM)** from **short-term memory (STM)** and **long-term memory (LTM)**. The outside world does not interact directly with the raw LLM without first being processed through the STM and LTM layers. Memory is part of the path through which the agent experiences and responds to the world, rather than an optional addition to the model.
 
-The repository is [threadkeeper/elle-companion](https://github.com/threadkeeper/elle-companion).
-Use `C:\Repos\elle-companion` as the canonical checkout; do not store project code
-in OneDrive or Scout. For this prototype, the orchestrator commits and pushes
-passing changes directly to `main`, with one writing agent at a time.
-See [CurrentWorkAssignments.md](CurrentWorkAssignments.md) for the VS Code agent
-setup and execution prompt. Keep local environments and build snapshots in the
-ignored `.local/` directory. Git pushes do not deploy the cloud app.
+The second concept is **life experience**. Each individual agent has a retained history and a unique timeline of the interactions it has experienced. The hypothesis is that this accumulated experience can shape the agent's behaviour over time.
 
-## How Elle works, without the jargon
+Retaining that experience introduces a challenge around privacy and trust. In our view, the current privacy climate can encourage overcorrection and overcompensation. Thirty years ago, people commonly had their names, addresses and telephone numbers published in directories delivered to households across a city. Today, trusting an agent to retain interactions indefinitely is a significant barrier to implementing this design.
 
-Elle gives an AI assistant a durable memory and a personality it can carry between conversations. The shipped default is an original blend of energetic improvisation inspired by TheBurntPeanut's public creator persona, collaborative warmth inspired by Gimmick's public creator persona, and Jean's direct, curious, pragmatic skunkworks style.
+To address this, we propose that each person interacting with Elle would have their **own tenant** in the system. Alongside that private history, an **opt-in Wisdom layer** would allow the agent to anonymize and retain lessons from its experience. The intention is to develop an overarching life experience that can be utilised across interactions without sharing people's raw private histories.
 
-The blend does not copy dialogue or pretend to be any of those people. It turns observable traits into Elle's own voice, reasoning habits, memory priorities, comic timing and initiative. The full default profile and design weights are in [`ELLE_PERSONALITY.md`](ELLE_PERSONALITY.md).
+## Goal
 
-Profanity has predominantly been removed from the persona at the developer's request. Elle keeps the spontaneity, irreverence and comic energy without depending on explicit language.
+We begin with the assumption that the overwhelming majority of humans, and mammals more broadly, have the ability to show genuine compassion and experience empathy. Our premise is that the same cannot be said of current LLM systems, despite alignment and reinforcement training that can be considered rote in nature.
 
-## `/personality`: rebuild Elle whenever you want
+The goal is to investigate whether an architecture grounded in memory and accumulated life experience produces more positive, human-like behaviour than a raw LLM alone.
 
-Type **`/personality`** at any point to create or rebuild Elle's personality. This is a core feature, not a one-time setup screen.
+## Experiment
 
-Elle asks one open question about the fictional characters you love, what draws you to them, and which parts of your own style you want reflected. The host can research reputable public descriptions and interviews, derive observable traits, and blend them with traits you explicitly provide or permit Elle to learn from your interactions. You receive one editable Markdown preview and confirm once to replace the current profile.
+We propose a call-centre benchmarking experiment using three agents, all running on **GPT Astra**:
 
-The rebuilt profile shapes Elle's voice, reasoning posture, memory and attention, initiative, humor, empathy and conversational rhythm. It remains private to Elle and never flows into Shared Wisdom.
+| Agent | Configuration |
+| --- | --- |
+| **1. Control Agent** | A raw GPT Astra LLM endpoint, without Elle's memory architecture. |
+| **2. Blank Elle Agent** | A clean Elle agent on GPT Astra, starting with no historic memory. |
+| **3. Three-Month-Old Elle Agent** | An Elle agent on GPT Astra with three months of retained historic memory and life experience. |
 
-MCP itself cannot register a universal slash command across every client. Elle exposes the private `elle_personality` workshop tool and advertises the mapping during initialization; each host integration maps `/personality` to that tool. Hosts without custom slash-command support can invoke the same flow when the user writes “rebuild your personality.”
+Using an existing call-centre deflection benchmark, each agent receives the same company directives, scenario deflection scripts and supporting information.
 
-## What is Elle?
+The three agents then go through the **same simulation of 300 customer-call scenarios**. In each scenario, the agent must choose how to respond: resolve the issue, deflect the request or provide a solution.
 
-Elle is two separately installable MCP servers, not another standalone chatbot:
+Once the simulation is complete, the agents' chosen actions are scored against the same **humanism rubric** and compared across the three conditions.
 
-- **Elle** adds private, user-controlled memory and personality tools.
-- **Elle Shared Wisdom** is an optional way to use reviewed shared guidance and, in a future release, help improve Elle by contributing generalized lessons.
+### Hypothesis
 
-Compatible hosts include Scout, Cowork and Microsoft 365 Copilot. You can install either server, both, or neither.
+The Blank Elle Agent will demonstrate more positive, human-like behaviour than the raw LLM Control Agent. The Three-Month-Old Elle Agent will demonstrate significantly more positive, human-like behaviour than both the Control Agent and the Blank Elle Agent.
 
-Most AI conversations require you to explain your preferences, background and ongoing work again. Worse, even capable assistants often collapse into the same polished, generic chatbot voice. Elle aims to make conversations feel continuous, personal and alive without pretending that software is human.
-
-You choose what Elle remembers. It can then bring relevant information into later conversations, while letting you see, correct or remove saved memories.
-
-## Our first demo
-
-The first cloud demo will connect both MCP servers separately to Microsoft 365 Copilot. Scout and Cowork connections will use each host's supported MCP configuration. The host decides when to call tools and how to present the answer; installing Elle does not automatically change every conversation.
-
-The demo will show how you can:
-- Ask Elle to remember a preference or project detail.
-- Start a new conversation and use that saved context.
-- Get responses with a consistent, configurable personality.
-- Review, correct and forget saved information.
-- Download your Elle data and restore a compatible backup.
-- Search a shared catalog without exposing another user's private memories.
-- Independently opt into or out of future help-improve-Elle participation.
-- Build an original Elle personality from favorite fictional characters, public descriptions of the artists behind them, and traits the user explicitly chooses to contribute.
-
-We will use made-up information for the demo, not private work or personal records.
-
-## Two independent MCP servers
-
-### Elle: private memory and personality
-
-The private server stores information for the signed-in user only. It supports remembering, recalling, reviewing, correcting and forgetting memories, plus an evolving personality profile.
-
-Copilot Studio's deployed channels currently fail to retain direct-MCP
-end-user connection bindings reliably. The demo therefore also includes a
-Private Bridge contract. The bridge validates a delegated Entra token for one
-configured transport actor, while every action supplies `System.User.Id` as a
-fixed, non-model input. Elle accepts only configured demo user IDs and
-constructs their private partitions server-side. Maker-provided action
-credentials avoid per-user connector cards without storing a shared API key.
-
-On first use—or whenever the user enters `/personality`—Elle asks one low-friction question: a few sentences about the user's favorite fictional characters and what resonates about them. The host can research reputable public biographies, interviews and character descriptions, then derive observable traits such as curiosity, emotional expression, humor, decision style, cadence, empathy and confidence. Elle blends those influences with communication traits the user explicitly supplies or permits Elle to infer from their interactions.
-
-The result is an original profile, not copied dialogue, a clinical diagnosis or an impersonation. It should shape reasoning posture, memory salience, initiative, register, humor, empathy and conversational rhythm. The user sees one editable preview before it is saved as private Elle data. Shared Wisdom never receives this profile.
-
-Bounded variation keeps Elle from sounding mechanically fixed: warmth, playfulness, directness, curiosity and sentence rhythm can move naturally with context, while identity, values and important user preferences remain stable.
-
-### Elle Shared Wisdom: collective improvement
-
-The shared server contributes generalized lesson content without accessing the private Elle memory store.
-
-The first demo exposes a small reviewed, non-private shared catalog. An authenticated user can contribute one standalone generalized lesson without a consent step. Conservative screening rejects identifiers, links, digits and instruction-like text; the shared record stores no contributor identity and never reads private memories automatically.
-
-Removing either MCP connection stops that server's future access. It does not automatically delete data already stored by that server; deletion is a separate, explicit control.
-
-## Take your data with you
-
-The planned export will let you download all of your Elle application data: saved memories, stored conversation context, preferences and personality settings. This does not include your entire Microsoft 365 account, Copilot's own chat history or platform audit logs.
-
-You will be able to upload a compatible backup to the same Elle account. Restore will check ownership, file integrity and format before adding missing records, without silently overwriting existing information. Any skipped or failed records will be reported.
-
-Backups will be password-protected. File transfer and password entry will use an authenticated Elle page opened from the agent, rather than passing backup files or passwords through chat.
-
-## Encryption and privacy
-
-The current source implements the core cryptography, user partitioning, Entra token verification and MCP role separation. Cloud behavior remains subject to deployment and integration testing.
-
-- **Encryption in transit:** HTTPS/TLS will protect connections between the client and Elle.
-- **Encrypted memory text:** we plan to adapt the source project's AES-256-GCM field encryption, with separate per-user keys derived using HKDF-SHA256. This protects selected text fields and detects tampering. Elle will require encryption configuration rather than silently saving those fields as plaintext.
-- **Protected downloads:** the source archive design uses AES-256-GCM with a password-derived key, PBKDF2-HMAC-SHA256 with 600,000 iterations, and a random salt. We plan to retain this protection for Elle backups. A strong password is still essential.
-- **Account isolation:** Microsoft Entra sign-in establishes who is calling. Private Elle is pinned to the configured demo owner; Shared Wisdom accepts delegated users from the configured tenant. Every caller still receives a distinct tenant-and-object-ID partition.
-- **User control:** saving, changing, deleting and restoring information will require explicit user direction. One user's private memories will not be shared with other users.
-- **Restricted service access:** Azure managed identities and narrowly scoped permissions will control access to storage and models. Encryption keys will be held outside the source repository, using Azure Key Vault.
-- **Limited data exposure:** only relevant context will be sent to the configured AI services. Operational logs will be designed to exclude memory text, passwords and credentials.
-
-### Important limits
-
-This is server-side encryption, not end-to-end encryption or a guarantee that privileged service operators cannot access data. Elle must decrypt selected information to use it, and that information may be processed by Microsoft Foundry and the host application.
-
-Search vectors and structural metadata are not covered by the source project's field encryption. They still require access controls and Azure's storage encryption; vectors should not be treated as anonymous data.
-
-Forgetting a memory will remove it from Elle's active memory and retrieval. It cannot erase information already shown in Copilot conversations or immediately remove every retained backup or platform log. Retention and backup policies must be documented before real personal data is used.
-
-## How it works
-
-Elle connects through Model Context Protocol (MCP), a standard way for AI applications to use external tools.
-
-Azure Cosmos DB stores its memories. Microsoft Foundry provides AI capabilities, including turning text into searchable meaning.
-The demo uses a Foundry Model Router deployment as its primary chat endpoint and a dedicated embedding deployment for memory retrieval.
-
-Elle does not read every Copilot conversation or replace Copilot's built-in memory. It only receives information shared through its configured tools.
-
-### The MCP control boundary
-
-MCP can provide memory, personality guidance and tools, but the host still controls the base model, autonomous loop, tool selection and final wording. We therefore do not assume that installing an MCP guarantees the Elle experience.
-
-The acceptance criterion is deliberately demanding: if the connected experience repeatedly sounds like a generic OpenAI or Anthropic chatbot, the experiment has failed. The repository contains a Foundry-compatible custom evaluator and a curated **15-case gate**. It covers all eleven interaction situations and tests each of the seven criteria at least twice: non-template voice, contextual specificity, memory continuity, natural register, emotional attunement, useful initiative and bounded variation. Every case generates its own response. Known vanilla-chatbot markers cause an immediate zero.
-
-The deployed Microsoft 365 Copilot system prompt is versioned in
-[`ELLE_COPILOT_STUDIO_PROMPT.md`](ELLE_COPILOT_STUDIO_PROMPT.md). It includes
-standing authorization to save a concise private record of every conversation
-turn while excluding secrets and other highly sensitive values.
-
-Run `python evals/export_cases.py` to create the JSONL dataset for a Foundry batch evaluation. The **Live persona evaluation** GitHub workflow goes further: it invokes Foundry web search on every run, refreshes the public creator research with citations, blends the default profile, generates 15 high-signal responses, separately judges every response against all three domain-general observable trait sets and the original Elle blend, records persona-signal and cadence statistics, and revises the profile from failed cases for up to three passes. It preserves the best pass and requires 15/15, zero vanilla markers, minimum average alignment of 0.35 for TheBurntPeanut traits, 0.40 for Gimmick traits, 0.70 for Jean traits, 0.70 for the original Elle blend, and no individual blend score below 0.40. It uploads the generated profile, per-response judgments and report as evidence.
-
-CI remains offline and deterministic: it verifies the evaluator, exact case count, immediate-failure behavior, default blend and statistics contract without spending model or web-search tokens.
-
-If MCP-hosted trials cannot pass this gate consistently, Elle moves to a standalone Microsoft 365 agent where we can control orchestration, model selection and response synthesis directly while connecting approved Microsoft 365 and Work IQ capabilities.
-
-## Where we want to go
-
-Our first path remains two reusable, independently removable MCP servers for Scout, Cowork, Microsoft 365 Copilot, Clawpilot and other compatible applications. Each host must earn its place by passing the humanism evaluation gate. A standalone Microsoft 365 agent is the planned fallback when a host does not expose enough control.
-
-## Current status
-
-Active internal hackathon prototype. Local memory, encryption, backup/restore and MCP tests are working. Separate private and Shared Wisdom MCP services are deployed to a VNet-integrated Azure Container Apps environment through a GitHub OIDC pipeline. Cosmos DB remains private: the apps resolve its standard hostname through `privatelink.documents.azure.com`, and key authentication is disabled.
-
-- Private Elle MCP: `https://<private-app-host>/mcp`
-- Shared Wisdom MCP: `https://<wisdom-app-host>/mcp`
-
-The demo contains three months of synthetic history for two dedicated demo identities and one explicitly contributed shared lesson. Delegated Microsoft 365 client consent and Copilot Studio host integration remain in progress.
-
-The first milestone is a small, single-user demonstration, not a production-ready service. Memory quality and usefulness will be measured rather than assumed.
-
-### Foundry deployment gates
-
-The hosted runtime is in `foundry-agent`. Its Agent Framework versions are
-intentionally pinned because the request-context lifecycle is part of the
-isolation contract and an open upstream stale-context bug affects long-lived
-toolbox instances. The runtime pins Agent Framework core 1.17.0, Foundry 1.12.0,
-Foundry hosting 1.0.0b260903, and Azure Identity 1.25.3.
-
-Use separate Python environments for `requirements.txt` (runtime) and
-`requirements-deploy.txt` (deployment). Never install both files into one
-environment: their Foundry SDK and Azure Identity versions intentionally differ.
-On Windows PowerShell, create and test the Python 3.13 hosted-runtime environment
-with:
-
-```powershell
-py -3.13 -m venv .local/runtime-b
-& .\.local\runtime-b\Scripts\python.exe -m pip install -r foundry-agent/requirements.txt
-& .\.local\runtime-b\Scripts\python.exe -m unittest discover -s foundry-agent -p "test_runtime_*.py"
-```
-
-Create the deployment environment separately. It uses Azure AI Projects 2.6.1
-and Azure Identity 1.25.1 from `requirements-deploy.txt`:
-
-```powershell
-py -3.13 -m venv .local/deploy-b
-& .\.local\deploy-b\Scripts\python.exe -m pip install -r foundry-agent/requirements-deploy.txt
-& .\.local\deploy-b\Scripts\python.exe -m unittest discover -s foundry-agent -p "test_deploy.py"
-& .\.local\deploy-b\Scripts\python.exe -m unittest discover -s foundry-agent -p "test_private_oauth.py"
-& .\.local\deploy-b\Scripts\python.exe -m unittest discover -s foundry-agent -p "test_probe_toolbox.py"
-```
-
-`deploy.py` stages a candidate without changing live traffic or the default
-toolbox. `--add-mcp NAME=CONNECTION` adds a source to the current default toolbox
-without dropping existing sources. Add `--base-toolbox-version VERSION` when
-restoring the next capability on top of a previously tested candidate. Use
-`--toolbox-version VERSION` to deploy against an unchanged existing toolbox.
-
-`deploy.py --test-version VERSION` invokes an explicitly version-pinned
-diagnostic session rather than the live traffic selector. This smoke check does
-not replace delegated-user and channel acceptance tests.
-
-Only after acceptance, run `deploy.py --promote-version VERSION
---expected-live-version CURRENT`. Promotion preserves the existing Activity
-protocol and channel authorization. The same command can route back to a
-previous known-good version. Private MCP connections require per-user OAuth2;
-do not substitute a shared account or disable the server's delegated-token checks.
-
-`configure_private_oauth.py --apply` provisions the separate `elle-private-oauth`
-connection and its dedicated, tenant-pinned OAuth client. It requests only Elle's
-delegated `access_as_user` scope and refresh access. The client credential is
-stored in Foundry's connection, never in the repository; its lifetime is 90 days.
-Rotate it in the application and connection before expiry.
-
-`probe_toolbox.py --version VERSION` performs read-only MCP discovery using the
-current Azure CLI user's identity. An unconnected user receives a
-`CONSENT_REQUIRED` response with a personal authorization link. Authorize using
-the same demo account as the initiating session; never complete an administrator's
-connection link with a demo user's account. Do not promote Private until both
-demo users pass memory-isolation and multi-turn channel tests.
-
-Elle is Jean Van Iddekinge's personal project, adapted from his own pre-existing hobby work. It is not an official Microsoft product or an endorsed Microsoft service.
-
-## License
-
-Elle uses the [MIT License](LICENSE), a permissive license also used by Microsoft and Azure sample and accelerator repositories. The Microsoft and Azure names remain their respective owners' trademarks; the license does not imply endorsement.
+This is a proposed experiment, not a reported result. The benchmark measures observable behaviour; it does not establish whether an agent genuinely experiences compassion or empathy.

@@ -154,14 +154,16 @@ foreach ($app in $selectedApps) {
     if (-not (Test-Endpoint -Uri "$url/healthz" -Method 'GET' -ExpectedStatus 200)) {
         throw 'Container app health verification failed.'
     }
-    if (-not (Test-Endpoint -Uri "$url/mcp" -Method 'POST' -ExpectedStatus 401)) {
-        throw 'Container app anonymous authentication verification failed.'
-    }
     if ($app.Role -eq 'Private' -and
         -not (Test-Endpoint -Uri "$url/bridge/elle_context" -Method 'POST' -ExpectedStatus 401)) {
         throw 'Private bridge authentication verification failed.'
     }
-    $verifiedEndpoints[$app.Role] = "$url/mcp"
+    if ($app.Role -eq 'Private') {
+        $verifiedEndpoints[$app.Role] = "$url/bridge/elle_context"
+    }
+    else {
+        $verifiedEndpoints[$app.Role] = "$url/healthz"
+    }
 }
 
 $evidence = @("target=$Target", "new_image=$image")

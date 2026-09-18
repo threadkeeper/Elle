@@ -1,0 +1,2351 @@
+{
+  "schema_version": 3,
+  "research_notice": "This fixture contains reviewed public-source evidence. No transcript or media files are committed. YouTube actual-start dates derive from release_timestamp and automatic captions may contain errors. Twitch rows use archive-created dates, which are not a proven stream start, and make no content claims. Unsupported dates leave stream occurrence unknown.",
+  "elle_rewrite": {
+    "status": "awaiting_authorized_hosted_run",
+    "prompt": "You are hosted Elle. Rewrite the candidate five-minute Dragon's Den stage script supplied after this prompt in your established voice. Preserve every technical claim and boundary: the fixture is reviewed public-source evidence; the runner is local-only; YouTube dates are actual-start dates; Twitch dates are archive-created and not proven stream starts; automatic-caption limitations remain explicit; unsupported dates leave occurrence unknown; private summaries never enter Shared Wisdom; DemoUser2 remains isolated; both role rejections are demonstrated; and hosted Elle does not load Shared Wisdom. Return only the rewritten stage script. Do not claim that you performed or witnessed the local run, and do not alter commands, evidence field names, derived counts, spoken questions, retrieval queries, exact expected lessons, or the pending rewrite-gate status.",
+    "acceptance_criteria": [
+      "Record explicit authorization for one hosted Elle invocation before sending the prompt or candidate script.",
+      "Supply only this exact prompt followed by the candidate five-minute stage script from DRAGONS_DEN_DEMO.md.",
+      "Reject the rewrite unless human comparison confirms every evidence, limitation, privacy, role, count, command, question, query, answer, and hosted-Wisdom boundary is unchanged.",
+      "Record accepted hosted output as separate follow-up evidence before replacing the candidate script or changing this pending status."
+    ],
+    "local_runner_executes_gate": false
+  },
+  "range": {
+    "start": "2026-08-01",
+    "end": "2026-09-17",
+    "timezone": "America/Chicago"
+  },
+  "public_sources": {
+    "youtube": {
+      "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+      "uploader_id": "@TheBurntPeanut",
+      "uploader": "TheBurntPeanut"
+    },
+    "twitch": {
+      "owner_id": "472066926",
+      "owner_login": "theburntpeanut",
+      "owner_display_name": "TheBurntPeanut"
+    }
+  },
+  "users": {
+    "demo_user_1": {
+      "label": "DemoUser1",
+      "tenant_id": "11111111-1111-4111-8111-111111111111",
+      "user_id": "22222222-2222-4222-8222-222222222222"
+    },
+    "demo_user_2": {
+      "label": "DemoUser2",
+      "tenant_id": "11111111-1111-4111-8111-111111111111",
+      "user_id": "33333333-3333-4333-8333-333333333333"
+    }
+  },
+  "days": [
+    {
+      "calendar_date": "2026-08-01",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-01 in America/Chicago.",
+      "summary": "The group began a Rust nation event with the goal of launching the first nuke, rushed early setup, and treated a box of explosive sulfur as key preparation.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "lFDI-kw0CJo",
+            "url": "https://www.youtube.com/watch?v=lFDI-kw0CJo",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1785616873,
+              "timestamp": 1785658057,
+              "upload_date": "20260802",
+              "title": "\ud83d\udd34LIVE | LIARS BAR | w/ Gimmick x OilRats x Coconut | #BUNGULATE",
+              "duration_seconds": 39119,
+              "snapshot": {
+                "file": "youtube/lFDI-kw0CJo.info.json",
+                "sha256": "f97d1e0726fe38a9c36564598049ab44b9679c14a7ae295b849de0d41a4fa5a3"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-01T20:41:13Z",
+            "broadcast_started_at_local": "2026-08-01T15:41:13-05:00",
+            "stream_local_date": "2026-08-01",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "lFDI-kw0CJo.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "2e5142011e20fed8f65971b5fb12b3080ef6a51dcabbce806903c4ef5e46c05e",
+              "bytes": 10098988,
+              "evidence_event_start_ms": [
+                389120,
+                421919,
+                431759
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Stage scarce resources before a timed objective so the decisive move is supported by preparation rather than hope.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-02",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-02 in America/Chicago.",
+      "summary": "Under special moon rules, the group reviewed event constraints, planned to stage near the missile silo and interrupt a launch, and later found a large rocket cache.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "OPdyG0kHzgc",
+            "url": "https://www.youtube.com/watch?v=OPdyG0kHzgc",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1785701103,
+              "timestamp": 1785732299,
+              "upload_date": "20260803",
+              "title": "\ud83d\udd34LIVE | RUST: GLOBAL WARFARE | MOON LAUNCH AT 4PM CT | 3 NUKES ON THE MOON | FINAL DAY | #BUNGULATE",
+              "duration_seconds": 28740,
+              "snapshot": {
+                "file": "youtube/OPdyG0kHzgc.info.json",
+                "sha256": "2045c9f96133f635da95f58660ea8effb0a0942115c6f152bf191a26ee3dacae"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-02T20:05:03Z",
+            "broadcast_started_at_local": "2026-08-02T15:05:03-05:00",
+            "stream_local_date": "2026-08-02",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "OPdyG0kHzgc.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "e7bda59e1aa84f952ea0952412f3cbecfaafd2d4ff17396779ae691e2b2d64d9",
+              "bytes": 7907158,
+              "evidence_event_start_ms": [
+                948160,
+                3290240,
+                15332000
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Rehearse special rules before committing scarce supplies, then build the plan around the constraint most likely to break it.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-03",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-03 in America/Chicago.",
+      "summary": "The group combined side and story objectives, planned to mark objectives and visit three Interchange extracts, then evaluated cargo documents held behind a locked room.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "-mK-DkO2SoY",
+            "url": "https://www.youtube.com/watch?v=-mK-DkO2SoY",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1785777332,
+              "timestamp": 1785822635,
+              "upload_date": "20260804",
+              "title": "\ud83d\udd34LIVE | TARKOV SEASONAL | GIMMICK X JOHN | MANY MEN MONDAY | #BUNGULATE",
+              "duration_seconds": 41123,
+              "snapshot": {
+                "file": "youtube/-mK-DkO2SoY.info.json",
+                "sha256": "53f8d31f250fd75ce9bf45c65ebd988ec5b5bc6cf044585ebe2109c97980e8ab"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-03T17:15:32Z",
+            "broadcast_started_at_local": "2026-08-03T12:15:32-05:00",
+            "stream_local_date": "2026-08-03",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "-mK-DkO2SoY.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "a0f396f356b474da161238896061b6d1188f5f84878ddc044fcf04ae16bef033",
+              "bytes": 11502434,
+              "evidence_event_start_ms": [
+                4151279,
+                4155920,
+                6751280
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Combine compatible objectives on one route, but verify locked dependencies before spending effort on a path that cannot finish.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-04",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-04 in America/Chicago.",
+      "summary": "Across two independent broadcasts that began on the same local date, the group progressed quests despite poor loot, secured a campfire-extract code, compared completed quest counts, and reviewed a task that unlocked useful key access.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "IX8mDR9i658",
+            "url": "https://www.youtube.com/watch?v=IX8mDR9i658",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1785821028,
+              "timestamp": 1785826971,
+              "upload_date": "20260804",
+              "title": "\ud83d\udd34LIVE | TARKOV SEASONAL | GIMMICK X JOHN | MANY MEN MONDAY | #BUNGULATE",
+              "duration_seconds": 5536,
+              "snapshot": {
+                "file": "youtube/IX8mDR9i658.info.json",
+                "sha256": "65ba2740c0652502bb25dcdf709a330db0adbac4bbfe12b789c5fe1b79ae1afb"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-04T05:23:48Z",
+            "broadcast_started_at_local": "2026-08-04T00:23:48-05:00",
+            "stream_local_date": "2026-08-04",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "IX8mDR9i658.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "7f5835a196087b9ba8d77f8c2b58f3573a6586862fe66bdaff6adc2cd54dff76",
+              "bytes": 1429406,
+              "evidence_event_start_ms": [
+                959120,
+                3995200
+              ]
+            }
+          },
+          {
+            "part": 2,
+            "video_id": "rUZDk2X6eUo",
+            "url": "https://www.youtube.com/watch?v=rUZDk2X6eUo",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1785883006,
+              "timestamp": 1785916011,
+              "upload_date": "20260805",
+              "title": "\ud83d\udd34LIVE | [DROPS TOMORROW] TARKOV SEASONAL | DAY 2 | HutchMF x Lemon | #BUNGULATE",
+              "duration_seconds": 31369,
+              "snapshot": {
+                "file": "youtube/rUZDk2X6eUo.info.json",
+                "sha256": "968a3b7a9fb1bcf3cfb3c2dc299f8a4699e58d993487398a13a5f73f0bb12db2"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-04T22:36:46Z",
+            "broadcast_started_at_local": "2026-08-04T17:36:46-05:00",
+            "stream_local_date": "2026-08-04",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "rUZDk2X6eUo.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "514dd36c5cecfb6e0c6d498018f1dcb85432ede85231132b2569d43d574d6f6e",
+              "bytes": 7822166,
+              "evidence_event_start_ms": [
+                4309679,
+                4316719,
+                4375440
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Compare completed work before choosing the next objective, then favor steps that unlock several useful options at once.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-05",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-05 in America/Chicago.",
+      "summary": "After finding that Shipment Tracking lacked the needed key, the group pivoted to a shotgun plan intended to advance multiple shared quests in one run.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "E6kvANEXhdU",
+            "url": "https://www.youtube.com/watch?v=E6kvANEXhdU",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1785965858,
+              "timestamp": 1786004131,
+              "upload_date": "20260806",
+              "title": "\ud83d\udd34LIVE | [BEST DROPS] TARKOV SEASONAL | DAY 3 | Hutch x GIMMICK | WACKADOODLE WEDNESDAY | #BUNGULATE",
+              "duration_seconds": 36516,
+              "snapshot": {
+                "file": "youtube/E6kvANEXhdU.info.json",
+                "sha256": "8cd460cc5b3e730e225b37b9b4e3b6c9a9e6584d823afca726c0db20785451e7"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-05T21:37:38Z",
+            "broadcast_started_at_local": "2026-08-05T16:37:38-05:00",
+            "stream_local_date": "2026-08-05",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "E6kvANEXhdU.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "ae173d810dabce104a43afb6a42ebf8cdf8c559dd1ab23d5251878edb274ef1e",
+              "bytes": 10565035,
+              "evidence_event_start_ms": [
+                985440,
+                989839,
+                5142159
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "When access blocks one objective, pivot to compatible work that can advance several goals with the same equipment.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-06",
+      "status": "metadata-only",
+      "date_basis": "twitch-archive-created-at",
+      "turn_prompt": "Record what public Twitch archive metadata establishes for VOD 2839245688 with archive-created date 2026-08-06 in America/Chicago.",
+      "summary": "Public Twitch archive metadata for VOD 2839245688 was created on 2026-08-06 in America/Chicago; this is not proof of the exact stream start, and no content claims are made without captions.",
+      "evidence": {
+        "basis": "public-twitch-vod-archive-metadata",
+        "vod_id": "2839245688",
+        "url": "https://www.twitch.tv/videos/2839245688",
+        "twitch_metadata": {
+          "id": "2839245688",
+          "published_at": "2026-08-07T00:07:23Z",
+          "broadcast_type": "ARCHIVE",
+          "title": "[BEST DROPS] TARKOV SEASONAL | DAY 4 | HutchMF x GIMMICK | THICC MEN THURSDAY | #BUNGULATE",
+          "length_seconds": 29900,
+          "owner_id": "472066926",
+          "owner_login": "theburntpeanut",
+          "owner_display_name": "TheBurntPeanut",
+          "snapshot": {
+            "file": "twitch/2839245688.raw.json",
+            "sha256": "ed44ff18b66d8925dcef98cfd6bf684e291ab9b3878c44aab604c19ebfda537b"
+          },
+          "yt_dlp_timestamp": 1786061243,
+          "yt_dlp_upload_date": "20260807",
+          "yt_dlp_snapshot": {
+            "file": "twitch/v2839245688.info.json",
+            "sha256": "fa69519c9fac0d672bfca85ec1c36d7b8daf79598aa1f1668878890cb57c0acc"
+          },
+          "created_at": "2026-08-07T00:07:23Z"
+        },
+        "archive_local_date": "2026-08-06",
+        "local_timezone": "America/Chicago",
+        "archive_created_at_utc": "2026-08-07T00:07:23Z",
+        "archive_created_at_local": "2026-08-06T19:07:23-05:00"
+      }
+    },
+    {
+      "calendar_date": "2026-08-07",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-07 in America/Chicago.",
+      "summary": "The group discovered that one player still needed an early task others had finished, then compared completed quest lists to choose work that would synchronize progression.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "-4bjvU4r4gs",
+            "url": "https://www.youtube.com/watch?v=-4bjvU4r4gs",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786147310,
+              "timestamp": 1786179590,
+              "upload_date": "20260808",
+              "title": "\ud83d\udd34LIVE | TARKOV SEASONAL | DAY 5 | LABYRINTH QUEST | GIMMICK X JOHN | FREAK BOB FRIDAY | #BUNGULATE",
+              "duration_seconds": 28115,
+              "snapshot": {
+                "file": "youtube/-4bjvU4r4gs.info.json",
+                "sha256": "483fccca465c049c9f37583a1561eab4cd735e00d3851577709316c922b6f8c6"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-08T00:01:50Z",
+            "broadcast_started_at_local": "2026-08-07T19:01:50-05:00",
+            "stream_local_date": "2026-08-07",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "-4bjvU4r4gs.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "af4a7385e06e053462df6b66d23b40c95bbf7acf7caa9dcceaf81de6da89932e",
+              "bytes": 7657476,
+              "evidence_event_start_ms": [
+                2576240,
+                2580000,
+                3136079
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Synchronize progress before acting so the group can choose work that benefits everyone and avoid repeating completed effort.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-08",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-08 in America/Chicago.",
+      "summary": "The group entered Labs with minimal gear, activated night vision for the dark interior, and changed route after judging one path too dangerous.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "d5HM_Jlfau0",
+            "url": "https://www.youtube.com/watch?v=d5HM_Jlfau0",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786234748,
+              "timestamp": 1786263784,
+              "upload_date": "20260809",
+              "title": "\ud83d\udd34LIVE | TARKOV SEASONAL | DAY 6 | LABYRINTH + KORD BREACH | HUTCHMF | SLUR SATURDAY | #BUNGULATE",
+              "duration_seconds": 27617,
+              "snapshot": {
+                "file": "youtube/d5HM_Jlfau0.info.json",
+                "sha256": "2f5480915cc6967e17319ee26d4e742ee6212de7496e3344ce00af3f331885df"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-09T00:19:08Z",
+            "broadcast_started_at_local": "2026-08-08T19:19:08-05:00",
+            "stream_local_date": "2026-08-08",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "d5HM_Jlfau0.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "40140aac50b3783adcf65bf2fa95a6ea8e92ad0b6956f2dc57503bb9f2a99f51",
+              "bytes": 7120054,
+              "evidence_event_start_ms": [
+                5095040,
+                5114719,
+                5207840
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Use tools that make uncertainty visible, and change course when new evidence shows that the planned route is needlessly risky.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-09",
+      "status": "unsupported-date",
+      "date_basis": "unsupported",
+      "evidence": {
+        "basis": "no-evidence-eligible-source-in-bounded-fixture",
+        "stream_occurrence": "unknown"
+      }
+    },
+    {
+      "calendar_date": "2026-08-10",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-10 in America/Chicago.",
+      "summary": "The group reviewed a shipping-document story quest, learned its poster could appear randomly, and planned a raid to search for it before pursuing follow-up objectives.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "l5iGpzO_z0k",
+            "url": "https://www.youtube.com/watch?v=l5iGpzO_z0k",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786408340,
+              "timestamp": 1786427441,
+              "upload_date": "20260811",
+              "title": "\ud83d\udd34LIVE | [DROPS] TARKOV SEASONAL | w/ GIMMICK | MANY MEN MONDAY | MAX TRADERS TONIGHT | #BUNGULATE",
+              "duration_seconds": 17988,
+              "snapshot": {
+                "file": "youtube/l5iGpzO_z0k.info.json",
+                "sha256": "ae42ef3537915e6e72650e1028f2ff47a630a41ff7354e7c50b14214b61074f5"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-11T00:32:20Z",
+            "broadcast_started_at_local": "2026-08-10T19:32:20-05:00",
+            "stream_local_date": "2026-08-10",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "l5iGpzO_z0k.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "bc04d2ce53052d64d591d99beb611f1fde26af9e084fc4c4cb998ba39b3d6203",
+              "bytes": 4877914,
+              "evidence_event_start_ms": [
+                962160,
+                1031280,
+                1134240
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "When progress depends on a random find, keep a fallback objective ready so the session can advance even when chance refuses to cooperate.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-11",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-11 in America/Chicago.",
+      "summary": "An early broadcast and one reconnect followed video and internet failures, including a low-cost pistol run. In a separate later broadcast, the group recovered a quest item, opened a new story line, and extracted successfully.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "oi3Tml3BlLg",
+            "url": "https://www.youtube.com/watch?v=oi3Tml3BlLg",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786426609,
+              "timestamp": 1786427184,
+              "upload_date": "20260811",
+              "title": "\ud83d\udd34LIVE | [DROPS] TARKOV SEASONAL | w/ GIMMICK | MANY MEN MONDAY | MAX TRADERS TONIGHT | #BUNGULATE",
+              "duration_seconds": 203,
+              "snapshot": {
+                "file": "youtube/oi3Tml3BlLg.info.json",
+                "sha256": "695931aa37b988e75b3b9f7be69ab479203056879475a14e6c8e668454482a87"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-11T05:36:49Z",
+            "broadcast_started_at_local": "2026-08-11T00:36:49-05:00",
+            "stream_local_date": "2026-08-11",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "oi3Tml3BlLg.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "efb28ab476a78788f96087a237fe052d8aeb53522a4ae9a305fcb5b69d5279c9",
+              "bytes": 57423,
+              "evidence_event_start_ms": [
+                9760,
+                61920,
+                109520
+              ]
+            }
+          },
+          {
+            "part": 2,
+            "video_id": "O58xTnKJFjM",
+            "url": "https://www.youtube.com/watch?v=O58xTnKJFjM",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786427371,
+              "timestamp": 1786428374,
+              "upload_date": "20260811",
+              "title": "\ud83d\udd34LIVE | [DROPS] TARKOV SEASONAL | w/ GIMMICK | MANY MEN MONDAY | MAX TRADERS TONIGHT | #BUNGULATE",
+              "duration_seconds": 774,
+              "snapshot": {
+                "file": "youtube/O58xTnKJFjM.info.json",
+                "sha256": "b801e8fadb553a7952bb8226d994630be79182e3e102de98a349a01fdb5468d3"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-11T05:49:31Z",
+            "broadcast_started_at_local": "2026-08-11T00:49:31-05:00",
+            "stream_local_date": "2026-08-11",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "O58xTnKJFjM.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "5c802cdc75de121c888f05622e334788cd97efafa4ca66eb788bb60216daddeb",
+              "bytes": 152075,
+              "evidence_event_start_ms": [
+                4040,
+                22200,
+                206080
+              ]
+            },
+            "reconnects_video_id": "oi3Tml3BlLg"
+          },
+          {
+            "part": 3,
+            "video_id": "hpSIP7Dey5c",
+            "url": "https://www.youtube.com/watch?v=hpSIP7Dey5c",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786493671,
+              "timestamp": 1786520385,
+              "upload_date": "20260812",
+              "title": "\ud83d\udd34LIVE | TARKOV SEASONAL | LABRYNTH | CLOAKZY X HUTCHMF | TESTICULAR TORSION TUESDAY | #BUNGULATE",
+              "duration_seconds": 25489,
+              "snapshot": {
+                "file": "youtube/hpSIP7Dey5c.info.json",
+                "sha256": "588734a5d1c51afaf8d028d078ea8ed4f37b6acf90b1e355f272d7cd630d6864"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-12T00:14:31Z",
+            "broadcast_started_at_local": "2026-08-11T19:14:31-05:00",
+            "stream_local_date": "2026-08-11",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "hpSIP7Dey5c.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "4f394e2419816c9d2e6eb34e2581988df528f8d4872ec57a821f6a54d5e47a22",
+              "bytes": 6498712,
+              "evidence_event_start_ms": [
+                4002720,
+                4014319,
+                10528800
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "After an interruption, restart with a cheap test, recover shared context, and reserve valuable gear until the connection proves stable.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-12",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-12 in America/Chicago.",
+      "summary": "The session moved from coordinating a tower objective to a monitors-off raid challenge, then switched into a builder-focused mode.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "O6YVbduEh_Y",
+            "url": "https://www.youtube.com/watch?v=O6YVbduEh_Y",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786580791,
+              "timestamp": 1786608628,
+              "upload_date": "20260813",
+              "title": "\ud83d\udd34LIVE | MACHINE PARTY | GIMMICK x LEMON x Gingy | WACKADOODLE WEDNESDAY | #BUNGULATE",
+              "duration_seconds": 26258,
+              "snapshot": {
+                "file": "youtube/O6YVbduEh_Y.info.json",
+                "sha256": "3f0dc5b16c6a7fd834be54afe607857297d2076927de83ccf563b178efa63234"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-13T00:26:31Z",
+            "broadcast_started_at_local": "2026-08-12T19:26:31-05:00",
+            "stream_local_date": "2026-08-12",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "O6YVbduEh_Y.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "8f7b5cbc6f2ff12592908d226c2444c4c2d676983c90d7f4a527cca3bb018427",
+              "bytes": 7267945,
+              "evidence_event_start_ms": [
+                9091439,
+                12904080,
+                22528718
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "When a difficult run mixes objectives, assign clear roles and adapt the challenge before changing modes.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-13",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-13 in America/Chicago.",
+      "summary": "The group balanced pairs, ran a support-focused survival raid, and later set up a wheel-and-bingo party challenge.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "YiBLXpGffMU",
+            "url": "https://www.youtube.com/watch?v=YiBLXpGffMU",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786666335,
+              "timestamp": 1786696495,
+              "upload_date": "20260814",
+              "title": "\ud83d\udd34LIVE | MACHINE PARTY | Cloakzy x Gimmick x Lemon | #BUNGULATE",
+              "duration_seconds": 27269,
+              "snapshot": {
+                "file": "youtube/YiBLXpGffMU.info.json",
+                "sha256": "0ba7aa5734c95ec967cf83563df8e7d51b0fa9589610264543b71c76731052bd"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-14T00:12:15Z",
+            "broadcast_started_at_local": "2026-08-13T19:12:15-05:00",
+            "stream_local_date": "2026-08-13",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "YiBLXpGffMU.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "52f82b89f21209332b20b54f55c7a59be007458575edd1c3242b3b67ef023bfb",
+              "bytes": 7345097,
+              "evidence_event_start_ms": [
+                833920,
+                9647280,
+                18428400
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Balanced teams and explicit support roles make changing group challenges easier to coordinate.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-14",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-14 in America/Chicago.",
+      "summary": "The group worked fuel-stash objectives, staged a trial-by-combat challenge, and later announced a winner in a classroom-themed contest.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "i2wxiiBIahk",
+            "url": "https://www.youtube.com/watch?v=i2wxiiBIahk",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786745580,
+              "timestamp": 1786782876,
+              "upload_date": "20260815",
+              "title": "\ud83d\udd34LIVE | MACHINE PARTY | 3-0 | UNDEFEATED CHAMPION | REIGN WILL LAST 4000 YEARS | #BUNGULATE",
+              "duration_seconds": 33818,
+              "snapshot": {
+                "file": "youtube/i2wxiiBIahk.info.json",
+                "sha256": "1b087f679b982cc5a5e26f47560569c35c901b7a962b7b75b0e3346573d35723"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-14T22:13:00Z",
+            "broadcast_started_at_local": "2026-08-14T17:13:00-05:00",
+            "stream_local_date": "2026-08-14",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "i2wxiiBIahk.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "b092190f490011ddaa50de9f34c6e22889fc613148d38568dfb985052310eb73",
+              "bytes": 9506767,
+              "evidence_event_start_ms": [
+                597040,
+                13345120,
+                18243200
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "A varied session works best when each challenge has a clear rule and an observable finish.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-15",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-15 in America/Chicago.",
+      "summary": "The session set first-to-three round rules, explored a smuggler area during an extraction run, and later staged a challenge against an undefeated champion.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "E4JXY1o8WnA",
+            "url": "https://www.youtube.com/watch?v=E4JXY1o8WnA",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1786831089,
+              "timestamp": 1786867553,
+              "upload_date": "20260816",
+              "title": "\ud83d\udd34LIVE | ZORT | GIMMICK | WE WON THE 2v2 TOURNAMENT | #BUNGULATE",
+              "duration_seconds": 34089,
+              "snapshot": {
+                "file": "youtube/E4JXY1o8WnA.info.json",
+                "sha256": "40dd467f8c287297f0cabcf550582536c993c9041df2279464294057691dc28e"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-15T21:58:09Z",
+            "broadcast_started_at_local": "2026-08-15T16:58:09-05:00",
+            "stream_local_date": "2026-08-15",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "E4JXY1o8WnA.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "ce2bb9f8bcf745fd3dd6f176de7acc856690016915e0315b65b6826819e0a1e0",
+              "bytes": 8990674,
+              "evidence_event_start_ms": [
+                177280,
+                12207040,
+                25587600
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Clear round rules, cautious exploration, and a final benchmark keep a varied competition understandable.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-16",
+      "status": "unsupported-date",
+      "date_basis": "unsupported",
+      "evidence": {
+        "basis": "no-evidence-eligible-source-in-bounded-fixture",
+        "stream_occurrence": "unknown"
+      }
+    },
+    {
+      "calendar_date": "2026-08-17",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-17 in America/Chicago.",
+      "summary": "The group compared shop and barter options, considered spending cash on a needed card, then planned a difficult quest and loadout.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "RuANYxOeuDk",
+            "url": "https://www.youtube.com/watch?v=RuANYxOeuDk",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787012357,
+              "timestamp": 1787041767,
+              "upload_date": "20260818",
+              "title": "\ud83d\udd34LIVE | LEBRON JAMES OF TARKOV | GIMMICK X HUTCHMF | LABRYNTH | MANY MEN MONDAY | #BUNGULATE",
+              "duration_seconds": 27948,
+              "snapshot": {
+                "file": "youtube/RuANYxOeuDk.info.json",
+                "sha256": "6494754c24b48200261dc6ce37dad5e600f8ebc8e1786424f813050a2b839e19"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-18T00:19:17Z",
+            "broadcast_started_at_local": "2026-08-17T19:19:17-05:00",
+            "stream_local_date": "2026-08-17",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "RuANYxOeuDk.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "b2a83e78c8445a95370b041a2cc49cd43ee8d19155f52c14e207cac0de862686",
+              "bytes": 7697664,
+              "evidence_event_start_ms": [
+                11825520,
+                13530319,
+                13562640
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Compare mission value, barter value, and immediate cash needs before deciding what to keep.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-18",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-18 in America/Chicago.",
+      "summary": "The group used a poll to choose a route, recalled a successful raid, and later settled a separate contest with a counted result.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "HfpPGbPE6IQ",
+            "url": "https://www.youtube.com/watch?v=HfpPGbPE6IQ",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787098768,
+              "timestamp": 1787127584,
+              "upload_date": "20260819",
+              "title": "\ud83d\udd34LIVE | ESCAPE FROM TARKOV | CLOAKZY | SEAL TEAM CHUNGUS | THE DEATHLY DUO | ICEBREAKER | #BUNGULATE",
+              "duration_seconds": 27321,
+              "snapshot": {
+                "file": "youtube/HfpPGbPE6IQ.info.json",
+                "sha256": "5f534af66776b4907a459464fe8beb284103f9c463e87b1f6a1b4621b92d3239"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-19T00:19:28Z",
+            "broadcast_started_at_local": "2026-08-18T19:19:28-05:00",
+            "stream_local_date": "2026-08-18",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "HfpPGbPE6IQ.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "6cb2645cd0a0f41117745426b1e159eee4ca3c2b853ea3ee4427cdcb641d7a2c",
+              "bytes": 7025812,
+              "evidence_event_start_ms": [
+                1275280,
+                1651440,
+                13104160
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Agree on the route before a risky raid, then use a clear count to settle a separate contest.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-19",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-19 in America/Chicago.",
+      "summary": "A team combat win was announced; later, a duel used a shared countdown and produced a separately announced winner.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "1YRBlxS43xY",
+            "url": "https://www.youtube.com/watch?v=1YRBlxS43xY",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787180074,
+              "timestamp": 1787213951,
+              "upload_date": "20260820",
+              "title": "\ud83d\udd34LIVE | ESCAPE FROM TARKOV | TimTheTatMan X HutchMF | SEAL TEAM SEXY | #BUNGULATE",
+              "duration_seconds": 32555,
+              "snapshot": {
+                "file": "youtube/1YRBlxS43xY.info.json",
+                "sha256": "3e47f039da3c48cc1d3816a7eca3e421331b9ac2e4a6bfd3363777b3ce3b94cb"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-19T22:54:34Z",
+            "broadcast_started_at_local": "2026-08-19T17:54:34-05:00",
+            "stream_local_date": "2026-08-19",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "1YRBlxS43xY.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "35f4a9f21de536b92fd683a7efcd86bd58c89fe7d182736938143fbbe76d285e",
+              "bytes": 8937874,
+              "evidence_event_start_ms": [
+                2285119,
+                14904319,
+                14917520
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Announce team results clearly, and use a shared countdown when a later duel needs an unambiguous start.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-20",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-20 in America/Chicago.",
+      "summary": "Players formed teams, fought through a contested extraction, and then confirmed their team win.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "OMwQgcK-6PE",
+            "url": "https://www.youtube.com/watch?v=OMwQgcK-6PE",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787263626,
+              "timestamp": 1787299374,
+              "upload_date": "20260821",
+              "title": "\ud83d\udd34LIVE | ZORT | CLOAKZY X GIMMICK | PARTY GAMES | THICC MEN THURSDAY | #BUNGULATE",
+              "duration_seconds": 33382,
+              "snapshot": {
+                "file": "youtube/OMwQgcK-6PE.info.json",
+                "sha256": "a529868c22c042e7ae773356e48d640ce01e1f44f2c0965c309927f97689c9af"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-20T22:07:06Z",
+            "broadcast_started_at_local": "2026-08-20T17:07:06-05:00",
+            "stream_local_date": "2026-08-20",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "OMwQgcK-6PE.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "e26d22e4fb4560dd9028b063378241e7a759cb3c0d8afa14a94656904efa7210",
+              "bytes": 8226327,
+              "evidence_event_start_ms": [
+                1548720,
+                2731680,
+                4275360
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Form the team before entering, coordinate the extraction, and confirm the result together.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-21",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-21 in America/Chicago.",
+      "summary": "The group shared revive supplies and managed ammunition during extraction, kept morale up, and later confirmed a match win.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "UvAxI_BUfqQ",
+            "url": "https://www.youtube.com/watch?v=UvAxI_BUfqQ",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787339232,
+              "timestamp": 1787388761,
+              "upload_date": "20260822",
+              "title": "\ud83d\udd34LIVE | WARDOGS BETA | SEAL TEAM SEXY | Cloakzy x Nickmercs x Hutch x Karma | #BUNGULATE",
+              "duration_seconds": 42900,
+              "snapshot": {
+                "file": "youtube/UvAxI_BUfqQ.info.json",
+                "sha256": "646834b912e76337a49b877cc4c3351517c8d65fdc2bf023dd9cf3e4cded02bb"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-21T19:07:12Z",
+            "broadcast_started_at_local": "2026-08-21T14:07:12-05:00",
+            "stream_local_date": "2026-08-21",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "UvAxI_BUfqQ.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "1616b189f70533ab61fa53a96047092f77f5c7614023422a35f4cc848e802cd7",
+              "bytes": 11892287,
+              "evidence_event_start_ms": [
+                2817839,
+                5606080,
+                5640320
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Share scarce supplies, prepare ammunition before moving, and keep team morale useful through the finish.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-22",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-22 in America/Chicago.",
+      "summary": "A three-team competition opened with a shared savings goal; later, the group marked a separate task complete and finished another match with an explicit win.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "5CXp-79XfvM",
+            "url": "https://www.youtube.com/watch?v=5CXp-79XfvM",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787432947,
+              "timestamp": 1787485339,
+              "upload_date": "20260823",
+              "title": "\ud83d\udd34LIVE | WARDOGS BETA | Unlocking L2A6 Tank | HutchMF x Habibi x Gimmick | SLUR SATURDAY | #BUNGULATE",
+              "duration_seconds": 42624,
+              "snapshot": {
+                "file": "youtube/5CXp-79XfvM.info.json",
+                "sha256": "cffa92967bbc920b62a7abb18e33378bbaa77d181275ba555ea90a9381751246"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-22T21:09:07Z",
+            "broadcast_started_at_local": "2026-08-22T16:09:07-05:00",
+            "stream_local_date": "2026-08-22",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "5CXp-79XfvM.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "f1d2a080604cfca2c38dab8e5a6cd143848a5364bcaa98641fae4b3b750d2a97",
+              "bytes": 12081186,
+              "evidence_event_start_ms": [
+                24160,
+                25902798,
+                42292240
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Set a shared goal, confirm each result, and mark completed tasks before moving to the next challenge.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-23",
+      "status": "unsupported-date",
+      "date_basis": "unsupported",
+      "evidence": {
+        "basis": "no-evidence-eligible-source-in-bounded-fixture",
+        "stream_occurrence": "unknown"
+      }
+    },
+    {
+      "calendar_date": "2026-08-24",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-24 in America/Chicago.",
+      "summary": "The host opened with How to Fish, expected company, then reported that one planned guest would not join.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "rCdF2UEDQXk",
+            "url": "https://www.youtube.com/watch?v=rCdF2UEDQXk",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787616898,
+              "timestamp": 1787644773,
+              "upload_date": "20260825",
+              "title": "\ud83d\udd34LIVE | HOW TO FISH | GIMMICK X JOHN X COCONUT | TARKOV LATER MAYBE | MANY MEN MONDAY | #BUNGULATE",
+              "duration_seconds": 26084,
+              "snapshot": {
+                "file": "youtube/rCdF2UEDQXk.info.json",
+                "sha256": "feb0955042387b0f19e2ab4f5ea56dafd2e831224b6b0f1c99a236372498efd1"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-25T00:14:58Z",
+            "broadcast_started_at_local": "2026-08-24T19:14:58-05:00",
+            "stream_local_date": "2026-08-24",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "rCdF2UEDQXk.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "d93fef122d323347b9e751eebffa89a40c72497b4c243a2692f8c9679da7499f",
+              "bytes": 6366574,
+              "evidence_event_start_ms": [
+                21039,
+                34800,
+                58239
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "When a planned collaborator drops out, state the change clearly and choose a workable solo path.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-25",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-25 in America/Chicago.",
+      "summary": "The host introduced a recommended party game, admitted uncertainty about its quality, and treated that uncertainty as part of trying something new.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "SuuEU2MOBJ4",
+            "url": "https://www.youtube.com/watch?v=SuuEU2MOBJ4",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787703232,
+              "timestamp": 1787731622,
+              "upload_date": "20260826",
+              "title": "\ud83d\udd34LIVE | BAR AFTER BAR | PARTY GAMES | Habibi x John x Pheetus x Gingy | TARKOV LATER | #BUNGULATE",
+              "duration_seconds": 26859,
+              "snapshot": {
+                "file": "youtube/SuuEU2MOBJ4.info.json",
+                "sha256": "50147bf232d686705a7f2092dad017a332af0e34f6fd860c91464822fbc7f269"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-26T00:13:52Z",
+            "broadcast_started_at_local": "2026-08-25T19:13:52-05:00",
+            "stream_local_date": "2026-08-25",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "SuuEU2MOBJ4.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "d1eaefb5c9ea9b480af5a3894f967717bdf380d6ef8acdaa05f9bd59abed825e",
+              "bytes": 7426298,
+              "evidence_event_start_ms": [
+                473919,
+                479360,
+                481120
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Trying an unfamiliar activity is easier when uncertainty is treated as part of the exploration.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-26",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-26 in America/Chicago.",
+      "summary": "The host outlined a flexible evening that would begin with a multiplayer game and could later move into a party game.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "jfpRJDLXi14",
+            "url": "https://www.youtube.com/watch?v=jfpRJDLXi14",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787789673,
+              "timestamp": 1787818754,
+              "upload_date": "20260827",
+              "title": "\ud83d\udd34LIVE | LOCKDOWN PROTOCOL | STREAMER LOBBY | PARTY GAMES | #BUNGULATE",
+              "duration_seconds": 26485,
+              "snapshot": {
+                "file": "youtube/jfpRJDLXi14.info.json",
+                "sha256": "9df8e5c002255d3187655475f9e1558d96a0f78899f88969907a9e6f37dcc2f9"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-27T00:14:33Z",
+            "broadcast_started_at_local": "2026-08-26T19:14:33-05:00",
+            "stream_local_date": "2026-08-26",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "jfpRJDLXi14.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "9019b0d2918cd24acbe6172fbad331298ef14b9c4e3868d8e54f432c8076f57b",
+              "bytes": 7865543,
+              "evidence_event_start_ms": [
+                46719,
+                48800,
+                51520
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "A flexible sequence keeps a group moving when the next activity depends on energy and availability.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-27",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-27 in America/Chicago.",
+      "summary": "Before gameplay, the host reviewed a batch of GTA VI clips, noted possible overlap with material shown to others, and watched the unfamiliar clips with the audience.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "I-81J-g2wyU",
+            "url": "https://www.youtube.com/watch?v=I-81J-g2wyU",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787875856,
+              "timestamp": 1787906954,
+              "upload_date": "20260828",
+              "title": "\ud83d\udd34LIVE | LEBRON OF TARKOV | Gimmick X Hutch | EFT x Hunger Games Tourny Tmo | GTA NEWS | #BUNGULATE",
+              "duration_seconds": 29460,
+              "snapshot": {
+                "file": "youtube/I-81J-g2wyU.info.json",
+                "sha256": "5d0432a0c7e2755ecbcf683378a9699d5d6c00e62538f7a21c1d1fa2c52b8f7d"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-28T00:10:56Z",
+            "broadcast_started_at_local": "2026-08-27T19:10:56-05:00",
+            "stream_local_date": "2026-08-27",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "I-81J-g2wyU.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "50f2a3197d32bc116cfc4d614c3c166572e7ed951bd75cfc121432b59202e50c",
+              "bytes": 8694116,
+              "evidence_event_start_ms": [
+                369199,
+                380160,
+                386319
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Review unfamiliar media together while stating what is known and what may already be familiar to the audience.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-28",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-28 in America/Chicago.",
+      "summary": "The host joined early after seeing the crew online, explained that departures and returns kept the lineup below a five-stack, and said interest in new games motivated the session.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "HVtwmO9RLNw",
+            "url": "https://www.youtube.com/watch?v=HVtwmO9RLNw",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1787955304,
+              "timestamp": 1787988757,
+              "upload_date": "20260829",
+              "title": "\ud83d\udd34LIVE | NEW COD WARZONE | PEANUT & THE PROS | METHODZ x DASHY x FORMAL | #BUNGULATE",
+              "duration_seconds": 31682,
+              "snapshot": {
+                "file": "youtube/HVtwmO9RLNw.info.json",
+                "sha256": "44f4b7f31796cc25cd0455762400a725273de405842367f4fb075624b8a9e38b"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-28T22:15:04Z",
+            "broadcast_started_at_local": "2026-08-28T17:15:04-05:00",
+            "stream_local_date": "2026-08-28",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "HVtwmO9RLNw.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "ab46acf7fdcdd293afc719f595c86eb6fdee46c5efdc7187d7069c9c164e3976",
+              "bytes": 8656392,
+              "evidence_event_start_ms": [
+                316479,
+                327199,
+                343759
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "A rotating group works better when availability is treated as fluid instead of forcing a fixed lineup.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-29",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-29 in America/Chicago.",
+      "summary": "The group chose a party game, considered staying with it all night, but explicitly left room to switch halfway if another game fit better.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "-cJ5jw2w-QY",
+            "url": "https://www.youtube.com/watch?v=-cJ5jw2w-QY",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1788049043,
+              "timestamp": 1788085439,
+              "upload_date": "20260830",
+              "title": "\ud83d\udd34LIVE | ZODIAC ISLAND | Gimmick X Habibi x John | LEBRON JAMES OF COCK OF DUTY | #Bungulate",
+              "duration_seconds": 33979,
+              "snapshot": {
+                "file": "youtube/-cJ5jw2w-QY.info.json",
+                "sha256": "771d3ef45186a52b9999d602c5f73c74314c0e7755309b7a3b53fe3eb79e1f9f"
+              }
+            },
+            "broadcast_started_at_utc": "2026-08-30T00:17:23Z",
+            "broadcast_started_at_local": "2026-08-29T19:17:23-05:00",
+            "stream_local_date": "2026-08-29",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "-cJ5jw2w-QY.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "f09ae106d947928a59fd7bd163249753d6263f58952acc73bc540db3c18edda5",
+              "bytes": 9459552,
+              "evidence_event_start_ms": [
+                291919,
+                296560,
+                303840
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Set a primary activity while keeping an explicit fallback so the group can adapt without losing momentum.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-08-30",
+      "status": "unsupported-date",
+      "date_basis": "unsupported",
+      "evidence": {
+        "basis": "no-evidence-eligible-source-in-bounded-fixture",
+        "stream_occurrence": "unknown"
+      }
+    },
+    {
+      "calendar_date": "2026-08-31",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-08-31 in America/Chicago.",
+      "summary": "The host questioned whether a Thursday beta would happen, then said that if it did he would join as soon as it started and play all day.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "H0j6tsnGdwE",
+            "url": "https://www.youtube.com/watch?v=H0j6tsnGdwE",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1788221770,
+              "timestamp": 1788248730,
+              "upload_date": "20260901",
+              "title": "\ud83d\udd34LIVE | ESCAPE FROM BUNGUS | John X Gimmick | Zero To Hero | LEMONS EFT TIER LIST SUCKS | #BUNGULATE",
+              "duration_seconds": 24063,
+              "snapshot": {
+                "file": "youtube/H0j6tsnGdwE.info.json",
+                "sha256": "a3007c9d72ef992873bfe467b1081441b93035c08315adba721468865b49598b"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-01T00:16:10Z",
+            "broadcast_started_at_local": "2026-08-31T19:16:10-05:00",
+            "stream_local_date": "2026-08-31",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "H0j6tsnGdwE.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "80fc128919f71ca72adafda713d37d205e11ee9b0c5bf42bc813c2eb8ca8f75f",
+              "bytes": 6702296,
+              "evidence_event_start_ms": [
+                277840,
+                290080,
+                295440
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Separate confirmed commitments from hopeful contingencies when timing depends on an uncertain release.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-01",
+      "status": "metadata-only",
+      "date_basis": "twitch-archive-created-at",
+      "turn_prompt": "Record what public Twitch archive metadata establishes for VOD 2862790005 with archive-created date 2026-09-01 in America/Chicago.",
+      "summary": "Public Twitch archive metadata for VOD 2862790005 was created on 2026-09-01 in America/Chicago; this is not proof of the exact stream start, and no content claims are made without captions.",
+      "evidence": {
+        "basis": "public-twitch-vod-archive-metadata",
+        "vod_id": "2862790005",
+        "url": "https://www.twitch.tv/videos/2862790005",
+        "twitch_metadata": {
+          "id": "2862790005",
+          "published_at": "2026-09-01T22:13:06Z",
+          "broadcast_type": "ARCHIVE",
+          "title": "THE COMEBACK. | John X Cloakzy | #BUNGULATE",
+          "length_seconds": 28160,
+          "owner_id": "472066926",
+          "owner_login": "theburntpeanut",
+          "owner_display_name": "TheBurntPeanut",
+          "snapshot": {
+            "file": "twitch/2862790005.raw.json",
+            "sha256": "88406d1d6023b4b670b11574a3c97dba184f2184456643ec4ae5c3a9e653fff1"
+          },
+          "yt_dlp_timestamp": 1788300786,
+          "yt_dlp_upload_date": "20260901",
+          "yt_dlp_snapshot": {
+            "file": "twitch/v2862790005.info.json",
+            "sha256": "021d927fe34a0ef39a3768f6747db11f15e3a650a9dc2c6d3a1375c807ba6913"
+          },
+          "created_at": "2026-09-01T22:13:06Z"
+        },
+        "archive_local_date": "2026-09-01",
+        "local_timezone": "America/Chicago",
+        "archive_created_at_utc": "2026-09-01T22:13:06Z",
+        "archive_created_at_local": "2026-09-01T17:13:06-05:00"
+      }
+    },
+    {
+      "calendar_date": "2026-09-02",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-02 in America/Chicago.",
+      "summary": "The host announced a move to CS2 and made opening cases the immediate focus, repeating the plan with rising enthusiasm.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "iJ_LeErn5w0",
+            "url": "https://www.youtube.com/watch?v=iJ_LeErn5w0",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1788387475,
+              "timestamp": 1788416933,
+              "upload_date": "20260903",
+              "title": "\ud83d\udd34LIVE | TARKOV | CLOAKZY | WARDOGS TOMORROW @ 1-4pm ct | #BUNGULATE",
+              "duration_seconds": 27030,
+              "snapshot": {
+                "file": "youtube/iJ_LeErn5w0.info.json",
+                "sha256": "9aa6cd411a00ec7f7250d00ad42426c69529bc247588e935f307a687da37c8c4"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-02T22:17:55Z",
+            "broadcast_started_at_local": "2026-09-02T17:17:55-05:00",
+            "stream_local_date": "2026-09-02",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "iJ_LeErn5w0.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "eda7908f0aa7797c7a89ad5357e6b65a362f210bc804f11ed99c20e13e80ff4d",
+              "bytes": 6319084,
+              "evidence_event_start_ms": [
+                368560,
+                370720,
+                372639
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "A clear transition helps an audience follow when an activity shifts from discussion into participation.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-03",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-03 in America/Chicago.",
+      "summary": "A newcomer receives starter supplies, learns the base-building loop, and later joins the clan during a raid.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "pE8wVKI79zo",
+            "url": "https://www.youtube.com/watch?v=pE8wVKI79zo",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1788462561,
+              "timestamp": 1788504195,
+              "upload_date": "20260904",
+              "title": "\ud83d\udd34LIVE | WARDOGS BETA | Tim x Hutch X Nickmercs X Landmark X Courage X Drac X Rogue | #BUNGULATE",
+              "duration_seconds": 39544,
+              "snapshot": {
+                "file": "youtube/pE8wVKI79zo.info.json",
+                "sha256": "8b91d25a1bbaa27e55329fbe42cbe30d35cbeb39ae4662b175f8df36307c4fa2"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-03T19:09:21Z",
+            "broadcast_started_at_local": "2026-09-03T14:09:21-05:00",
+            "stream_local_date": "2026-09-03",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "pE8wVKI79zo.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "5a2390cf08ffb625153b5dc5fe568284360fbbf9623feab81178b39ecb452f05",
+              "bytes": 11610466,
+              "evidence_event_start_ms": [
+                1800640,
+                2549440,
+                12700560
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Give newcomers basic supplies and one clear building goal before involving them in a larger fight.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-04",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-04 in America/Chicago.",
+      "summary": "The group treats batteries as revive capacity, rallies to defend the main base with a tank, and adapts as a helicopter adds pressure.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "1iJ9F_v47TY",
+            "url": "https://www.youtube.com/watch?v=1iJ9F_v47TY",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1788549864,
+              "timestamp": 1788599083,
+              "upload_date": "20260905",
+              "title": "\ud83d\udd34LIVE | WARDOGS | FREAK A FAN FRIDAY | Cloakzy X Gimmick X Habibi X Coconut X dezign | #BUNGULATE",
+              "duration_seconds": 42899,
+              "snapshot": {
+                "file": "youtube/1iJ9F_v47TY.info.json",
+                "sha256": "bd9653ef2288c84aaabd7c0965859d18354ae060622c137d90a7763790713c08"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-04T19:24:24Z",
+            "broadcast_started_at_local": "2026-09-04T14:24:24-05:00",
+            "stream_local_date": "2026-09-04",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "1iJ9F_v47TY.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "8c7b2639f1fd8749880c7d889a76ba174988b8f9897d3cebba5a9e910a12fe0f",
+              "bytes": 12313056,
+              "evidence_event_start_ms": [
+                5976639,
+                6922639,
+                6979760
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Reserve scarce revival capacity for moments when recovering a teammate preserves the defense.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-05",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-05 in America/Chicago.",
+      "summary": "During an active siege, the group urgently rebuilds damaged walls, stabilizes its position, and later shifts from defense to attacking another castle.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "Q86yyzHUMAk",
+            "url": "https://www.youtube.com/watch?v=Q86yyzHUMAk",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1788643350,
+              "timestamp": 1788687137,
+              "upload_date": "20260906",
+              "title": "\ud83d\udd34LIVE | WARDOGS | HABIBI X COCONUTB | $1,000,000 & L2A6 TANK TONIGHT | #BUNGULATE",
+              "duration_seconds": 40167,
+              "snapshot": {
+                "file": "youtube/Q86yyzHUMAk.info.json",
+                "sha256": "7da0461f0cb5d64854cad5622a5804a648472e0914c2c7c16ce880eab3d19b9e"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-05T21:22:30Z",
+            "broadcast_started_at_local": "2026-09-05T16:22:30-05:00",
+            "stream_local_date": "2026-09-05",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "Q86yyzHUMAk.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "70c7d88c3f3515d2a52146110b22ddf0fb6b1c86d98cc22c540352f62230a936",
+              "bytes": 10903174,
+              "evidence_event_start_ms": [
+                12455600,
+                12496239,
+                27666558
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "After surviving a breach, restore the weakest barrier before turning from defense to counterattack.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-06",
+      "status": "unsupported-date",
+      "date_basis": "unsupported",
+      "evidence": {
+        "basis": "no-evidence-eligible-source-in-bounded-fixture",
+        "stream_occurrence": "unknown"
+      }
+    },
+    {
+      "calendar_date": "2026-09-07",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-07 in America/Chicago.",
+      "summary": "A Project Zomboid learning run moves from basic survival lessons to warehouse looting and choosing a car over a generator, ending with a clearer grasp of the game.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "QDu39yxRoFc",
+            "url": "https://www.youtube.com/watch?v=QDu39yxRoFc",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1788822688,
+              "timestamp": 1788859349,
+              "upload_date": "20260908",
+              "title": "\ud83d\udd34LIVE | TRYING OUT PROJECT ZOMBOID FOR THE FIRST TIME | Gimmick X John X Cloakzy | #BUNGULATE",
+              "duration_seconds": 35195,
+              "snapshot": {
+                "file": "youtube/QDu39yxRoFc.info.json",
+                "sha256": "74c90159cca6faeb28bc2e7e38b7e365511b9cce39d16434ad5775bd65fa807e"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-07T23:11:28Z",
+            "broadcast_started_at_local": "2026-09-07T18:11:28-05:00",
+            "stream_local_date": "2026-09-07",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "QDu39yxRoFc.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "4645f7991537a1d392fd51619567d48fa4383eb2d2dc5bb654b633b3a1339949",
+              "bytes": 9526171,
+              "evidence_event_start_ms": [
+                667360,
+                5265840,
+                9442080
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "When learning a complex survival game, prioritize mobility and immediate escape needs before long term base upgrades.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-08",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-08 in America/Chicago.",
+      "summary": "The Tarkov squad limits looting during danger, preserves a required quest item, and weighs armor and ammunition while preparing later runs.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "Um3q4A1E_Xo",
+            "url": "https://www.youtube.com/watch?v=Um3q4A1E_Xo",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1788909589,
+              "timestamp": 1788946357,
+              "upload_date": "20260909",
+              "title": "\ud83d\udd34LIVE | PROJECT ZOMBOID | HABIBI X JOHN | TESTICULAR TORSION TUESDAY | #BUNGULATE",
+              "duration_seconds": 35390,
+              "snapshot": {
+                "file": "youtube/Um3q4A1E_Xo.info.json",
+                "sha256": "a81079fbacf430365c287bd941c142c035247356c493cbfed67f3fc1772a970b"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-08T23:19:49Z",
+            "broadcast_started_at_local": "2026-09-08T18:19:49-05:00",
+            "stream_local_date": "2026-09-08",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "Um3q4A1E_Xo.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "74150ab8a8efda3a5a7b108ac92aa66bcbc7978603f755f2e75b5f29c9e8a9ca",
+              "bytes": 10349687,
+              "evidence_event_start_ms": [
+                2005360,
+                4523440,
+                9773359
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Keep mission critical items and reliable ammunition ahead of optional loot when space and attention are limited.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-09",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-09 in America/Chicago.",
+      "summary": "The Tarkov session focuses on advancing Ragman tasks and choosing routes around objectives, then later protects scav reputation instead of taking an immediate fight.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "QbKD1DIhJcA",
+            "url": "https://www.youtube.com/watch?v=QbKD1DIhJcA",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1788995633,
+              "timestamp": 1789023696,
+              "upload_date": "20260910",
+              "title": "\ud83d\udd34LIVE | ESCAPE FROM BUNGUS | GIMMICK X CLOAKZY | LEBRON JAMES + ANGEL REESE OF TARKOV | #BUNGULATE",
+              "duration_seconds": 26699,
+              "snapshot": {
+                "file": "youtube/QbKD1DIhJcA.info.json",
+                "sha256": "bb99c666c25c31315a4a551e36825b23214ba496b87c60b7f80164d15a0930f6"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-09T23:13:53Z",
+            "broadcast_started_at_local": "2026-09-09T18:13:53-05:00",
+            "stream_local_date": "2026-09-09",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "QbKD1DIhJcA.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "1abce77e5705749d5979530c9aca1c6db434aac1eb5301043195acbb8438a959",
+              "bytes": 7397156,
+              "evidence_event_start_ms": [
+                10034479,
+                10112000,
+                20774320
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Choose tasks that advance several goals at once, and protect long term progression when a short term reward would undermine it.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-10",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-10 in America/Chicago.",
+      "summary": "The squad plans a helicopter assault on tower four, agrees to land on the roof, and rallies the wider team to the same objective.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "nt_utGbae4I",
+            "url": "https://www.youtube.com/watch?v=nt_utGbae4I",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1789058265,
+              "timestamp": 1789109571,
+              "upload_date": "20260911",
+              "title": "\ud83d\udd34LIVE | WARDOGS | ITS GO TIME | Hutch x Lvndmark x Nickmercs | #BUNGULATE",
+              "duration_seconds": 42899,
+              "snapshot": {
+                "file": "youtube/nt_utGbae4I.info.json",
+                "sha256": "feabc401ff57ddbbbc15268b405bea8ea25e0eb870e34075df3633299d8e1ba8"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-10T16:37:45Z",
+            "broadcast_started_at_local": "2026-09-10T11:37:45-05:00",
+            "stream_local_date": "2026-09-10",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "nt_utGbae4I.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "04d6efa16e2817018d51643fb74840da2f5ed0e924f21da7d89a0f7a0e18d291",
+              "bytes": 12242130,
+              "evidence_event_start_ms": [
+                2966800,
+                2975680,
+                2986240
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Before a risky assault, state the destination, entry point, and movement sequence so the whole team acts together.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-11",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-11 in America/Chicago.",
+      "summary": "After a failed vehicle push, the squad regroups, uses smoke and defibrillators to recover teammates, then diverts defenders and captures another tower.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "FM8Fg9i9xhw",
+            "url": "https://www.youtube.com/watch?v=FM8Fg9i9xhw",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1789155783,
+              "timestamp": 1789199201,
+              "upload_date": "20260912",
+              "title": "\ud83d\udd34LIVE | WARDOGS | KING OF THE TOWERS | CLOAKZY X GIMMICK X COCONUT X HABIBI | #BUNGULATE",
+              "duration_seconds": 40978,
+              "snapshot": {
+                "file": "youtube/FM8Fg9i9xhw.info.json",
+                "sha256": "59f09ee3909c7f6c3fb4ddbe4f994d7409f21f54ee9145c9b5a5142081740248"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-11T19:43:03Z",
+            "broadcast_started_at_local": "2026-09-11T14:43:03-05:00",
+            "stream_local_date": "2026-09-11",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "FM8Fg9i9xhw.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "0abe4072dc55a081dfdc5ce58f6e030e95abea26f8eeb2a2e2e4da5b8c9c2b4f",
+              "bytes": 11852015,
+              "evidence_event_start_ms": [
+                2915280,
+                3768240,
+                4059920
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "After a broken push, regroup at a known base, restore the team, then attack through a different route.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-12",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-12 in America/Chicago.",
+      "summary": "Helicopter-supported objective coordination closes with the team explicitly declaring the game won.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "AVv3hj5G49s",
+            "url": "https://www.youtube.com/watch?v=AVv3hj5G49s",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1789249525,
+              "timestamp": 1789285671,
+              "upload_date": "20260913",
+              "title": "\ud83d\udd34LIVE | WARDOGS | SLUR SATURDAY | STRIKE TEAM NUT | GIMMICK X COCONUTB X HABIBI X JOHN | #BUNGULATE",
+              "duration_seconds": 34356,
+              "snapshot": {
+                "file": "youtube/AVv3hj5G49s.info.json",
+                "sha256": "06557d968ddb622296e205fdbf9bea8dc0ad5a49ca44af8cad57334150c5ac75"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-12T21:45:25Z",
+            "broadcast_started_at_local": "2026-09-12T16:45:25-05:00",
+            "stream_local_date": "2026-09-12",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "AVv3hj5G49s.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "deaa61d1b9c4a28522e9a09e29cab0ad36c9ebedfc4611a58bf010168643752c",
+              "bytes": 10016825,
+              "evidence_event_start_ms": [
+                9938800,
+                9958720,
+                9976399
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Fast transport matters most when it carries a coordinated team toward shared objectives.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-13",
+      "status": "unsupported-date",
+      "date_basis": "unsupported",
+      "evidence": {
+        "basis": "no-evidence-eligible-source-in-bounded-fixture",
+        "stream_occurrence": "unknown"
+      }
+    },
+    {
+      "calendar_date": "2026-09-14",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-14 in America/Chicago.",
+      "summary": "A medic recovery steadies the group, and continued healing adds points while reinforcing confidence that the match can be won.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "sg5NqBKZn20",
+            "url": "https://www.youtube.com/watch?v=sg5NqBKZn20",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1789427978,
+              "timestamp": 1789460467,
+              "upload_date": "20260915",
+              "title": "\ud83d\udd34LIVE | WARDOGS | COMMUNITY SERVER CASH BONUS | STRIKE TEAM NUT | GIMMICK X CLOAKZY | #BUNGULATE",
+              "duration_seconds": 30383,
+              "snapshot": {
+                "file": "youtube/sg5NqBKZn20.info.json",
+                "sha256": "d9dce01046d8bd1a98a4ed234f3f8a1c67b3a32a265effb7b2e1080cf287c1b0"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-14T23:19:38Z",
+            "broadcast_started_at_local": "2026-09-14T18:19:38-05:00",
+            "stream_local_date": "2026-09-14",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "sg5NqBKZn20.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "1772ddd0986d659627520a317e6abb02bb3a24ea1f661a6d9d490b98c3463c2a",
+              "bytes": 8753571,
+              "evidence_event_start_ms": [
+                5262960,
+                5274080,
+                5278800
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Support actions can convert pressure into steady progress when they reinforce the teams immediate plan.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-15",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-15 in America/Chicago.",
+      "summary": "The stream spans several activities: discussion of returning to Peak, a role-switching social round, then a management game focused on ticket sales and facilities.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "-l2FM0mVJXA",
+            "url": "https://www.youtube.com/watch?v=-l2FM0mVJXA",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1789514258,
+              "timestamp": 1789542465,
+              "upload_date": "20260916",
+              "title": "\ud83d\udd34LIVE | WARDOGS | CLOAKZY X JOHN X DRAC | TESTICULAR TORSION TUESDAY | #BUNGULATE",
+              "duration_seconds": 26805,
+              "snapshot": {
+                "file": "youtube/-l2FM0mVJXA.info.json",
+                "sha256": "66675b35702c2de7de9b91447fd83c8b5de1464259232dae3dcc0f10a93b1e10"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-15T23:17:38Z",
+            "broadcast_started_at_local": "2026-09-15T18:17:38-05:00",
+            "stream_local_date": "2026-09-15",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "-l2FM0mVJXA.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "ce43dc27a59c9e7b00ffbfff6e89485f4caa04503baff3ae6abfe14da37bcecc",
+              "bytes": 7464624,
+              "evidence_event_start_ms": [
+                473840,
+                6345440,
+                7751679
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "When a session changes activities, treat each transition as a fresh plan instead of carrying assumptions forward.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-16",
+      "status": "caption-grounded",
+      "date_basis": "youtube-live-broadcast-start",
+      "turn_prompt": "Recall the reviewed public evidence for Burnt Peanut YouTube broadcasts with actual-start date 2026-09-16 in America/Chicago.",
+      "summary": "Cooperative missions move from wave objectives to a successful extermination, loot recovery, and further progression before the stream later changes games.",
+      "evidence": {
+        "basis": "official-youtube-json3-captions-and-live-metadata",
+        "source_parts": [
+          {
+            "part": 1,
+            "video_id": "-2Vx7j-YfKo",
+            "url": "https://www.youtube.com/watch?v=-2Vx7j-YfKo",
+            "youtube_metadata": {
+              "channel_id": "UCMNEVbszv8ZyvSXoTn3yhpQ",
+              "uploader_id": "@TheBurntPeanut",
+              "uploader": "TheBurntPeanut",
+              "live_status": "was_live",
+              "release_timestamp": 1789600778,
+              "timestamp": 1789630728,
+              "upload_date": "20260917",
+              "title": "\ud83d\udd34LIVE | RV THERE YET | GIMMICK X COCONUTB X JOHN | WACKADOODLE WEDNESDAY | #BUNGULATE",
+              "duration_seconds": 28565,
+              "snapshot": {
+                "file": "youtube/-2Vx7j-YfKo.info.json",
+                "sha256": "35e92bcc07ae4bbebe52548a79fa6c5df1dddafea444a207e1360155c243f28f"
+              }
+            },
+            "broadcast_started_at_utc": "2026-09-16T23:19:38Z",
+            "broadcast_started_at_local": "2026-09-16T18:19:38-05:00",
+            "stream_local_date": "2026-09-16",
+            "local_timezone": "America/Chicago",
+            "caption": {
+              "file": "-2Vx7j-YfKo.en-orig.json3",
+              "language": "en",
+              "kind": "youtube-automatic-original",
+              "sha256": "015b28c7affebf1520c90394791f04a3c82c1fdbe65cc77c4d368ee7c014c7d9",
+              "bytes": 7964499,
+              "evidence_event_start_ms": [
+                2028480,
+                7001920,
+                9356240
+              ]
+            }
+          }
+        ]
+      },
+      "wisdom": {
+        "text": "Finish the current objective, recover useful supplies, then choose the next challenge with the teams condition in mind.",
+        "explicitly_reviewed": true
+      }
+    },
+    {
+      "calendar_date": "2026-09-17",
+      "status": "unsupported-date",
+      "date_basis": "unsupported",
+      "evidence": {
+        "basis": "no-evidence-eligible-source-in-bounded-fixture",
+        "stream_occurrence": "unknown"
+      }
+    }
+  ],
+  "questions": [
+    {
+      "id": "high-stakes-preparation",
+      "question": "How should a team prepare for a high stakes objective?",
+      "query": "scarce resources",
+      "expected_lesson": "Stage scarce resources before a timed objective so the decisive move is supported by preparation rather than hope."
+    },
+    {
+      "id": "multiple-goals",
+      "question": "How can a team avoid wasting effort while pursuing several goals?",
+      "query": "locked dependencies",
+      "expected_lesson": "Combine compatible objectives on one route, but verify locked dependencies before spending effort on a path that cannot finish."
+    },
+    {
+      "id": "resume-after-failure",
+      "question": "What is a sensible way to resume after a disruptive failure?",
+      "query": "cheap test",
+      "expected_lesson": "After an interruption, restart with a cheap test, recover shared context, and reserve valuable gear until the connection proves stable."
+    },
+    {
+      "id": "change-course",
+      "question": "What helps people change course without stalling?",
+      "query": "explicit fallback",
+      "expected_lesson": "Set a primary activity while keeping an explicit fallback so the group can adapt without losing momentum."
+    },
+    {
+      "id": "recover-failed-push",
+      "question": "What is a good recovery plan after a failed push?",
+      "query": "broken push",
+      "expected_lesson": "After a broken push, regroup at a known base, restore the team, then attack through a different route."
+    }
+  ]
+}

@@ -38,7 +38,10 @@ jobs:
       - name: Install hosted runtime dependencies
         run: python -m pip install -r foundry-agent/requirements.txt
       - name: Test hosted request isolation
-        run: python -m unittest discover -s foundry-agent -p "test_runtime_*.py"
+        run: |
+          python -m unittest discover -s foundry-agent -p "test_runtime_*.py"
+          python -m unittest discover -s foundry-agent -p "test_private_tools.py"
+          python -m unittest discover -s foundry-agent -p "test_turn_memory.py"
 
   foundry-deployment:
     runs-on: ubuntu-latest
@@ -49,11 +52,8 @@ jobs:
           persist-credentials: false
       - name: Install deployment dependencies
         run: python -m pip install -r foundry-agent/requirements-deploy.txt
-      - name: Test deployment, OAuth configuration, and toolbox probing
-        run: |
-          python -m unittest discover -s foundry-agent -p "test_deploy.py"
-          python -m unittest discover -s foundry-agent -p "test_private_oauth.py"
-          python -m unittest discover -s foundry-agent -p "test_probe_toolbox.py"
+      - name: Test direct Foundry deployment
+        run: python -m unittest discover -s foundry-agent -p "test_deploy.py"
 
   rust:
     runs-on: ubuntu-latest

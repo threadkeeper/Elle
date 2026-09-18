@@ -227,7 +227,7 @@ pub fn definitions_for_role(role: ServerRole) -> Vec<Value> {
             json!({"payload":payload.clone(),"idempotency_key":{"type":"string","minLength":1,"maxLength":128},"expires_at":{"type":["integer","null"],"minimum":0}}), &["payload","idempotency_key"]),
         tool("elle_correct", "Correct an owned memory using its current reviewed version.", true, false,
             json!({"id":{"type":"string"},"expected_version":{"type":"integer","minimum":1},"payload":payload}), &["id","expected_version","payload"]),
-        tool("elle_forget", "Delete an owned memory. This cannot delete Copilot chats or backups.", true, false,
+        tool("elle_forget", "Delete an owned memory. This cannot delete conversation history or backups.", true, false,
             json!({"id":{"type":"string"},"expected_version":{"type":"integer","minimum":1}}), &["id","expected_version"]),
         tool("elle_personality", "Start or restart Elle's private personality workshop. Hosts should map the /personality command to this tool.", true, false, json!({}), &[]),
         tool("elle_set_personality", "Save a personality rebuild using the workshop's current version.", true, false,

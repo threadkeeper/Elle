@@ -18,8 +18,8 @@ from azure.ai.projects.models import (
     FixedRatioVersionSelectionRule,
     HostedAgentDefinition,
     ProtocolVersionRecord,
-    VersionSelector,
     VersionRefIndicator,
+    VersionSelector,
 )
 from azure.identity import AzureCliCredential
 
@@ -31,9 +31,11 @@ PROJECT_ENDPOINT = (
     "proj-default-sweden"
 )
 AGENT_NAME = "elle"
-TOOLBOX_NAME = "elle-tools"
 DEFAULT_MODEL_DEPLOYMENT_NAME = "gpt-5.6-luna"
-SUPPORTED_TOOLBOX_VERSIONS = frozenset({"3", "4"})
+PRIVATE_TOOLS_ENDPOINT = (
+    "https://elle-private-vnet.yellowsky-9d92d540.swedencentral."
+    "azurecontainerapps.io/bridge"
+)
 CONTINUITY_ENDPOINT = (
     "https://elle-private-vnet.yellowsky-9d92d540.swedencentral."
     "azurecontainerapps.io/continuity/context"
@@ -49,7 +51,7 @@ def model_deployment_name() -> str:
 
 
 def prompt_text() -> str:
-    text = (ROOT / "ELLE_COPILOT_STUDIO_PROMPT.md").read_text(encoding="utf-8")
+    text = (ROOT / "ELLE_AGENT_PROMPT.md").read_text(encoding="utf-8")
     if text.startswith("---"):
         _, _, text = text.partition("---")
         _, separator, text = text.partition("---")
@@ -64,7 +66,8 @@ def package_source() -> tuple[bytes, str]:
         archive.write(SOURCE / "main.py", "main.py")
         archive.write(SOURCE / "caller_identity.py", "caller_identity.py")
         archive.write(SOURCE / "continuity.py", "continuity.py")
-        archive.write(SOURCE / "request_scoped_tools.py", "request_scoped_tools.py")
+        archive.write(SOURCE / "private_tools.py", "private_tools.py")
+        archive.write(SOURCE / "turn_memory.py", "turn_memory.py")
         archive.write(SOURCE / "requirements.txt", "requirements.txt")
         archive.writestr("instructions.txt", prompt_text())
     payload = buffer.getvalue()
@@ -91,14 +94,8 @@ def wait_until_active(
 
 def deploy(
     project: AIProjectClient,
-    toolbox_version: str,
     identity_binding_probe_nonce: str | None = None,
 ) -> str:
-    if (
-        not isinstance(toolbox_version, str)
-        or toolbox_version not in SUPPORTED_TOOLBOX_VERSIONS
-    ):
-        raise ValueError("Staging requires toolbox version 3 or 4")
     endpoint = project.agents.get(AGENT_NAME).agent_endpoint
     if endpoint is None or endpoint.version_selector is None:
         raise RuntimeError("Pin live traffic to a version before staging")
@@ -106,22 +103,10 @@ def deploy(
     if not rules or any(rule.type != "FixedRatio" for rule in rules):
         raise RuntimeError("Pin live traffic to a version before staging")
     code, digest = package_source()
-    toolbox_endpoint = (
-        f"{PROJECT_ENDPOINT}/toolboxes/{TOOLBOX_NAME}/versions/"
-        f"{toolbox_version}/mcp?api-version=v1"
-    )
     environment_variables = {
         "AZURE_AI_MODEL_DEPLOYMENT_NAME": model_deployment_name(),
-        "ELLE_TOOLBOX_LIFETIME": "request_scoped",
-        "TOOLBOX_ENDPOINT": toolbox_endpoint,
+        "ELLE_PRIVATE_TOOLS_ENDPOINT": PRIVATE_TOOLS_ENDPOINT,
     }
-    if toolbox_version == "3":
-        environment_variables.update(
-            {
-                "ELLE_CONTINUITY_ENDPOINT": CONTINUITY_ENDPOINT,
-                "ELLE_CONTINUITY_SCOPE": CONTINUITY_SCOPE,
-            }
-        )
     if identity_binding_probe_nonce is not None:
         if not _PROBE_NONCE_PATTERN.fullmatch(identity_binding_probe_nonce):
             raise ValueError("Identity binding probe nonce must be safe bounded ASCII")
@@ -211,27 +196,17 @@ def main() -> None:
     action.add_argument("--promote-version", help="Promote an already-tested version")
     action.add_argument("--test-version", help="Smoke-test one explicit candidate")
     parser.add_argument("--expected-live-version", help="Required guard for promotion")
-    parser.add_argument("--toolbox-version", help="Stage against this existing toolbox")
     parser.add_argument(
         "--identity-binding-probe-nonce",
-        help="Stage a separate temporary operator-only identity binding probe candidate",
+        help="Stage a separate temporary identity binding probe candidate",
     )
     args = parser.parse_args()
     if args.promote_version and not args.expected_live_version:
         parser.error("--promote-version requires --expected-live-version")
-    if (args.promote_version or args.test_version) and (
-        args.toolbox_version or args.identity_binding_probe_nonce
-    ):
+    if (args.promote_version or args.test_version) and args.identity_binding_probe_nonce:
         parser.error("Testing/promotion cannot be combined with staging options")
-    if (
-        args.toolbox_version
-        and args.toolbox_version not in SUPPORTED_TOOLBOX_VERSIONS
-    ):
-        parser.error("Staging requires --toolbox-version 3 or 4")
-    if args.identity_binding_probe_nonce and not args.toolbox_version:
-        parser.error("Identity binding probe staging requires --toolbox-version")
-    if not (args.promote_version or args.test_version or args.toolbox_version):
-        parser.error("Staging requires explicit --toolbox-version")
+    if not (args.promote_version or args.test_version or args.identity_binding_probe_nonce is not None):
+        parser.error("Staging requires --identity-binding-probe-nonce or an explicit action")
 
     PROJECT_ENDPOINT = args.project_endpoint.rstrip("/")
     credential = AzureCliCredential(process_timeout=120)
@@ -243,11 +218,7 @@ def main() -> None:
         if args.test_version:
             print(smoke_test(project, args.test_version))
             return
-        toolbox_version = args.toolbox_version
-        project.toolboxes.get_version(TOOLBOX_NAME, toolbox_version)
-        agent_version = deploy(
-            project, toolbox_version, args.identity_binding_probe_nonce
-        )
+        agent_version = deploy(project, args.identity_binding_probe_nonce)
 
     print(
         json.dumps(
@@ -256,8 +227,6 @@ def main() -> None:
                 "agentVersion": agent_version,
                 "model": model_deployment_name(),
                 "projectEndpoint": PROJECT_ENDPOINT,
-                "toolbox": TOOLBOX_NAME,
-                "toolboxVersion": toolbox_version,
                 "promoted": False,
             },
             indent=2,

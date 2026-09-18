@@ -89,7 +89,6 @@ class CallerIdentityTests(unittest.TestCase):
             runtime.build_agent(
                 client=object(),
                 credential=object(),
-                toolbox_url="https://example.test/mcp",
                 name="elle",
                 instructions="Test instructions",
             )

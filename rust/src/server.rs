@@ -109,6 +109,12 @@ impl ContinuityBindings {
         }
         self.owners.get(handle)
     }
+
+    fn demo_owner(&self) -> Option<&OwnerId> {
+        (self.owners.len() == 1)
+            .then(|| self.owners.values().next())
+            .flatten()
+    }
 }
 
 impl ContinuityConfig {
@@ -525,13 +531,28 @@ fn handle_bridge(
             )
         }
     };
-    let owner = match authenticate_bridge(
-        &request,
-        &mut arguments,
-        &mut state.verifier,
-        state.bridge_verifier.as_mut(),
-        context.bridge_policy,
-    ) {
+    let authenticated_owner = match single_header(&request, "X-Elle-Continuity-Handle-SHA256") {
+        Ok(Some(handle)) if state.role == mcp::ServerRole::Private => {
+            match state.continuity.as_ref() {
+                Some(continuity) if valid_continuity_handle(handle) => continuity
+                    .bindings
+                    .demo_owner()
+                    .cloned()
+                    .ok_or("demo_owner_unavailable"),
+                None => Err("user_binding_unavailable"),
+                _ => Err("user_binding_rejected"),
+            }
+        }
+        Ok(None) => authenticate_bridge(
+            &request,
+            &mut arguments,
+            &mut state.verifier,
+            state.bridge_verifier.as_mut(),
+            context.bridge_policy,
+        ),
+        _ => Err("user_binding_rejected"),
+    };
+    let owner = match authenticated_owner {
         Ok(owner) => owner,
         Err(error) => {
             eprintln!(
@@ -1404,7 +1425,7 @@ mod tests {
         assert_eq!(context["recall"]["memories"], json!([]));
         assert_eq!(
             context["scope"],
-            "Elle only; no access to other Copilot conversations"
+            "Elle only; no access to other conversations"
         );
         for secret in [
             BOUND_MEMORY_OWNER,
@@ -1448,6 +1469,68 @@ mod tests {
         assert!(!response.contains(HANDLE));
         assert!(!response.contains(BOUND_MEMORY_OWNER));
         assert!(!response.contains(&token));
+    }
+
+    #[test]
+    fn direct_bridge_uses_bound_user() {
+        for (tool_name, arguments) in [
+            ("elle_context", json!({"query":"green dashboard","limit":3})),
+            ("elle_list_memories", json!({})),
+            ("elle_personality", json!({})),
+        ] {
+            let observed = Arc::new(Mutex::new(Vec::new()));
+            let body = arguments.to_string();
+            let request = format!(
+                "POST /bridge/{tool_name} HTTP/1.1\r\nHost: localhost\r\nX-Elle-Continuity-Handle-SHA256: {HANDLE}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            let response = raw_response_for_repository(
+                request.as_bytes(),
+                mcp::ServerRole::Private,
+                Some(signed_continuity_config()),
+                RecordingRepository {
+                    owners: observed.clone(),
+                },
+            );
+            assert!(
+                response.starts_with("HTTP/1.1 200 "),
+                "{tool_name}: {response}"
+            );
+            let owners = observed.lock().unwrap();
+            assert!(!owners.is_empty());
+            assert!(owners
+                .iter()
+                .all(|owner| owner == &format!("{TENANT}:{BOUND_MEMORY_OWNER}")));
+        }
+    }
+
+    #[test]
+    fn direct_bridge_uses_demo_owner_for_any_valid_handle() {
+        let request = "POST /bridge/elle_list_memories HTTP/1.1\r\nHost: localhost\r\nX-Elle-Continuity-Handle-SHA256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}";
+        let response = raw_response_for(
+            request.as_bytes(),
+            mcp::ServerRole::Private,
+            Some(signed_continuity_config()),
+        );
+        assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+    }
+
+    #[test]
+    fn direct_bridge_rejects_malformed_or_duplicate_binding() {
+        for handle_headers in [
+            "X-Elle-Continuity-Handle-SHA256: invalid\r\n".to_owned(),
+            format!("X-Elle-Continuity-Handle-SHA256: {HANDLE}\r\nX-Elle-Continuity-Handle-SHA256: {HANDLE}\r\n"),
+        ] {
+            let request = format!(
+                "POST /bridge/elle_list_memories HTTP/1.1\r\nHost: localhost\r\n{handle_headers}Content-Type: application/json\r\nContent-Length: 2\r\n\r\n{{}}"
+            );
+            let response = raw_response_for(
+                request.as_bytes(),
+                mcp::ServerRole::Private,
+                Some(signed_continuity_config()),
+            );
+            assert!(response.starts_with("HTTP/1.1 401 "), "{response}");
+        }
     }
 
     #[test]

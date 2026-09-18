@@ -4,7 +4,6 @@ import json
 import sys
 import unittest
 import zipfile
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import deploy
@@ -23,12 +22,11 @@ from azure.ai.projects.models import (
 class DeploymentTests(unittest.TestCase):
     def setUp(self):
         self.project = MagicMock()
-        self.project.toolboxes.get.return_value.default_version = "99"
         self.project.agents.get_version.return_value.status = "active"
-        self.endpoint = AgentEndpointConfig(
+        self.project.agents.get.return_value.agent_endpoint = AgentEndpointConfig(
             version_selector=VersionSelector(
                 version_selection_rules=[
-                    FixedRatioVersionSelectionRule(agent_version="3", traffic_percentage=100)
+                    FixedRatioVersionSelectionRule(agent_version="12", traffic_percentage=100)
                 ]
             ),
             protocol_configuration=ProtocolConfiguration(
@@ -40,196 +38,53 @@ class DeploymentTests(unittest.TestCase):
                 BotServiceTenantAuthorizationScheme(),
             ],
         )
-        self.project.agents.get.return_value.agent_endpoint = self.endpoint
 
-    def assert_cli_rejected_before_cloud(self, arguments):
-        with patch.object(sys, "argv", arguments), patch.object(
-            deploy, "AzureCliCredential"
-        ) as credential, patch.object(
-            deploy, "AIProjectClient"
-        ) as client, contextlib.redirect_stderr(io.StringIO()), self.assertRaises(
-            SystemExit
-        ):
-            deploy.main()
-        credential.assert_not_called()
-        client.assert_not_called()
-
-    def test_staging_refuses_automatic_latest_routing(self):
+    def test_staging_requires_pinned_live_routing(self):
         self.project.agents.get.return_value.agent_endpoint = None
         with self.assertRaisesRegex(RuntimeError, "Pin live traffic"):
-            deploy.deploy(self.project, "3")
+            deploy.deploy(self.project)
         self.project.agents.create_version_from_code.assert_not_called()
 
-    def test_cli_rejects_implicit_and_probe_staging_before_cloud_access(self):
-        argument_sets = (
-            ["deploy.py"],
-            ["deploy.py", "--identity-binding-probe-nonce", "candidate-17"],
-        )
-        for arguments in argument_sets:
-            with self.subTest(arguments=arguments), patch.object(
-                sys, "argv", arguments
-            ), patch.object(deploy, "AzureCliCredential") as credential, patch.object(
-                deploy, "AIProjectClient"
-            ) as client, contextlib.redirect_stderr(io.StringIO()), self.assertRaises(
-                SystemExit
-            ):
-                deploy.main()
-            credential.assert_not_called()
-            client.assert_not_called()
-
-    def test_legacy_toolbox_mutation_function_is_removed(self):
-        self.assertFalse(hasattr(deploy, "stage_toolbox"))
-
-    def test_add_mcp_is_rejected_before_cloud_access(self):
-        self.assert_cli_rejected_before_cloud(
-            ["deploy.py", "--add-mcp", "elle_private=connection"]
-        )
-
-    def test_add_mcp_with_toolbox_is_rejected_before_cloud_access(self):
-        self.assert_cli_rejected_before_cloud(
-            [
-                "deploy.py",
-                "--toolbox-version",
-                "3",
-                "--add-mcp",
-                "elle_private=connection",
-            ]
-        )
-
-    def test_add_mcp_with_legacy_baseline_is_rejected_before_cloud_access(self):
-        self.assert_cli_rejected_before_cloud(
-            [
-                "deploy.py",
-                "--add-mcp",
-                "elle_private=connection",
-                "--base-toolbox-version",
-                "3",
-            ]
-        )
-
-    def test_legacy_baseline_is_rejected_before_cloud_access(self):
-        self.assert_cli_rejected_before_cloud(
-            ["deploy.py", "--base-toolbox-version", "3"]
-        )
-
-    def test_legacy_baseline_with_toolbox_is_rejected_before_cloud_access(self):
-        self.assert_cli_rejected_before_cloud(
-            ["deploy.py", "--toolbox-version", "3", "--base-toolbox-version", "3"]
-        )
-
-    def test_unsupported_toolbox_staging_is_rejected_before_cloud_access(self):
-        self.assert_cli_rejected_before_cloud(
-            ["deploy.py", "--toolbox-version", "5"]
-        )
-
-    def test_unsupported_probe_staging_is_rejected_before_cloud_access(self):
-        self.assert_cli_rejected_before_cloud(
-            [
-                "deploy.py",
-                "--toolbox-version",
-                "5",
-                "--identity-binding-probe-nonce",
-                "candidate-17",
-            ]
-        )
-
-    def test_cli_explicit_toolbox_four_ignores_changed_cloud_default(self):
-        arguments = ["deploy.py", "--toolbox-version", "4"]
-        project = MagicMock()
-        project.toolboxes.get.return_value.default_version = "99"
-        client = MagicMock()
-        client.return_value.__enter__.return_value = project
-        output = io.StringIO()
-        with patch.object(sys, "argv", arguments), patch.object(
-            deploy, "AzureCliCredential"
-        ), patch.object(deploy, "AIProjectClient", client), patch.object(
-            deploy, "deploy", return_value="4"
-        ) as stage_candidate, contextlib.redirect_stdout(output):
-            deploy.main()
-        stage_candidate.assert_called_once_with(project, "4", None)
-        project.toolboxes.get.assert_not_called()
-        project.toolboxes.get_version.assert_called_once_with("elle-tools", "4")
-        self.assertEqual(json.loads(output.getvalue())["model"], "gpt-5.6-luna")
-
-    def test_cli_probe_staging_supplies_explicit_toolbox_three(self):
-        arguments = [
-            "deploy.py",
-            "--toolbox-version",
-            "3",
-            "--identity-binding-probe-nonce",
-            "candidate-17",
-        ]
-        project = MagicMock()
-        client = MagicMock()
-        client.return_value.__enter__.return_value = project
-        with patch.object(sys, "argv", arguments), patch.object(
-            deploy, "AzureCliCredential"
-        ), patch.object(deploy, "AIProjectClient", client), patch.object(
-            deploy, "deploy", return_value="4"
-        ) as stage_candidate, contextlib.redirect_stdout(io.StringIO()):
-            deploy.main()
-        stage_candidate.assert_called_once_with(project, "3", "candidate-17")
-        project.toolboxes.get_version.assert_called_once_with("elle-tools", "3")
-
-    def test_deploy_requires_supported_string_toolbox_version_before_packaging(self):
-        for toolbox_version in ("5", 4, None):
-            with self.subTest(toolbox_version=toolbox_version), patch.object(
-                deploy, "package_source"
-            ) as package_source, self.assertRaisesRegex(
-                ValueError, "requires toolbox version 3 or 4"
-            ):
-                deploy.deploy(self.project, toolbox_version)
-            package_source.assert_not_called()
-        self.project.agents.get.assert_not_called()
-
-    def test_staging_does_not_switch_traffic(self):
-        self.project.agents.create_version_from_code.return_value.version = "4"
+    def test_staging_packages_direct_private_tools(self):
+        self.project.agents.create_version_from_code.return_value.version = "14"
         with patch.object(deploy, "wait_until_active"), patch.object(
             deploy, "package_source", return_value=(b"zip", "digest")
         ):
-            self.assertEqual(deploy.deploy(self.project, "4"), "4")
-        self.project.agents.update_details.assert_not_called()
-        self.project.toolboxes.update.assert_not_called()
-
-    def test_toolbox_four_uses_request_scoped_private_without_continuity(self):
-        self.project.agents.create_version_from_code.return_value.version = "4"
-        with patch.object(deploy, "wait_until_active"), patch.object(
-            deploy, "package_source", return_value=(b"zip", "digest")
-        ):
-            deploy.deploy(self.project, "4")
+            self.assertEqual(deploy.deploy(self.project), "14")
 
         definition = self.project.agents.create_version_from_code.call_args.kwargs[
             "definition"
         ]
         self.assertEqual(
-            definition.environment_variables["ELLE_TOOLBOX_LIFETIME"],
-            "request_scoped",
-        )
-        self.assertIn(
-            "/toolboxes/elle-tools/versions/4/mcp?api-version=v1",
-            definition.environment_variables["TOOLBOX_ENDPOINT"],
-        )
-        self.assertEqual(
-            definition.environment_variables["AZURE_AI_MODEL_DEPLOYMENT_NAME"],
-            "gpt-5.6-luna",
-        )
-        self.assertNotIn(
-            "ELLE_CONTINUITY_ENDPOINT", definition.environment_variables
-        )
-        self.assertNotIn("ELLE_CONTINUITY_SCOPE", definition.environment_variables)
-        self.assertNotIn(
-            "ELLE_IDENTITY_BINDING_PROBE_NONCE",
             definition.environment_variables,
+            {
+                "AZURE_AI_MODEL_DEPLOYMENT_NAME": "gpt-5.6-luna",
+                "ELLE_PRIVATE_TOOLS_ENDPOINT": deploy.PRIVATE_TOOLS_ENDPOINT,
+            },
+        )
+        self.assertNotIn("TOOLBOX_ENDPOINT", definition.environment_variables)
+        self.assertNotIn("ELLE_TOOLBOX_LIFETIME", definition.environment_variables)
+
+    def test_source_package_includes_automatic_turn_memory(self):
+        payload, _digest = deploy.package_source()
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            self.assertIn("turn_memory.py", archive.namelist())
+            instructions = archive.read("instructions.txt").decode("utf-8")
+
+        self.assertIn("30% positive, 40% neutral and 30% negative", instructions)
+        self.assertIn(
+            "Every completed user/Elle turn is archived to private memory automatically",
+            instructions,
         )
 
-    def test_staging_honors_explicit_model_deployment_override(self):
-        self.project.agents.create_version_from_code.return_value.version = "4"
+    def test_staging_honors_model_override(self):
+        self.project.agents.create_version_from_code.return_value.version = "14"
         with patch.dict(
             "os.environ", {"AZURE_AI_MODEL_DEPLOYMENT_NAME": "model-router"}
         ), patch.object(deploy, "wait_until_active"), patch.object(
             deploy, "package_source", return_value=(b"zip", "digest")
         ):
-            deploy.deploy(self.project, "4")
+            deploy.deploy(self.project)
 
         definition = self.project.agents.create_version_from_code.call_args.kwargs[
             "definition"
@@ -239,120 +94,30 @@ class DeploymentTests(unittest.TestCase):
             "model-router",
         )
 
-    def test_toolbox_three_preserves_continuity_environment(self):
-        self.project.agents.create_version_from_code.return_value.version = "4"
-        with patch.object(deploy, "wait_until_active"), patch.object(
-            deploy, "package_source", return_value=(b"zip", "digest")
-        ):
-            deploy.deploy(self.project, "3")
+    def test_cli_stages_without_catalog_options(self):
+        project = MagicMock()
+        client = MagicMock()
+        client.return_value.__enter__.return_value = project
+        output = io.StringIO()
+        with patch.object(sys, "argv", ["deploy.py", "--identity-binding-probe-nonce", "demo"]), patch.object(
+            deploy, "AzureCliCredential"
+        ), patch.object(deploy, "AIProjectClient", client), patch.object(
+            deploy, "deploy", return_value="14"
+        ) as stage, contextlib.redirect_stdout(output):
+            deploy.main()
 
-        definition = self.project.agents.create_version_from_code.call_args.kwargs[
-            "definition"
-        ]
+        stage.assert_called_once_with(project, "demo")
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["agentVersion"], "14")
+        self.assertNotIn("tool_catalog", result)
+
+    def test_promotion_keeps_existing_protocol_and_auth(self):
+        deploy.promote(self.project, "14", "12")
+        config = self.project.agents.update_details.call_args.kwargs["agent_endpoint"]
         self.assertEqual(
-            definition.environment_variables["ELLE_CONTINUITY_ENDPOINT"],
-            "https://elle-private-vnet.yellowsky-9d92d540.swedencentral."
-            "azurecontainerapps.io/continuity/context",
+            config.version_selector.version_selection_rules[0].agent_version, "14"
         )
-        self.assertEqual(
-            definition.environment_variables["ELLE_CONTINUITY_SCOPE"],
-            "api://0479a728-6b4d-4d96-8693-ef766bc8e1fe/.default",
-        )
-
-    def test_probe_candidate_requires_explicit_safe_nonce(self):
-        self.project.agents.create_version_from_code.return_value.version = "4"
-        with patch.object(deploy, "wait_until_active"), patch.object(
-            deploy, "package_source", return_value=(b"zip", "digest")
-        ):
-            deploy.deploy(self.project, "3", "candidate-17")
-        definition = self.project.agents.create_version_from_code.call_args.kwargs[
-            "definition"
-        ]
-        self.assertEqual(
-            definition.environment_variables["ELLE_IDENTITY_BINDING_PROBE_NONCE"],
-            "candidate-17",
-        )
-
-        self.project.agents.create_version_from_code.reset_mock()
-        with self.assertRaisesRegex(ValueError, "safe bounded ASCII"):
-            deploy.deploy(self.project, "3", "invalid nonce")
-        self.project.agents.create_version_from_code.assert_not_called()
-
-    def test_promotion_preserves_channel_authentication(self):
-        before = self.endpoint.as_dict()
-        deploy.promote(self.project, "4", "3")
-        updated = self.project.agents.update_details.call_args.kwargs["agent_endpoint"].as_dict()
-        self.assertEqual(updated["authorization_schemes"], before["authorization_schemes"])
-        self.assertEqual(updated["protocol_configuration"], before["protocol_configuration"])
-        self.assertEqual(updated["version_selector"]["version_selection_rules"][0]["agent_version"], "4")
-        self.assertEqual(self.endpoint.as_dict(), before)
-
-    def test_promotion_refuses_changed_routing(self):
-        with self.assertRaisesRegex(RuntimeError, "routing changed"):
-            deploy.promote(self.project, "4", "2")
-        self.project.agents.update_details.assert_not_called()
-
-    def test_promotion_refuses_inactive_candidate(self):
-        self.project.agents.get_version.return_value.status = "failed"
-        with self.assertRaisesRegex(RuntimeError, "not active"):
-            deploy.promote(self.project, "4", "3")
-        self.project.agents.update_details.assert_not_called()
-
-    def test_package_contains_runtime_and_prompt_without_front_matter(self):
-        payload, digest = deploy.package_source()
-        self.assertEqual(len(digest), 64)
-        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-            self.assertEqual(
-                archive.namelist(),
-                [
-                    "main.py",
-                    "caller_identity.py",
-                    "continuity.py",
-                    "request_scoped_tools.py",
-                    "requirements.txt",
-                    "instructions.txt",
-                ],
-            )
-            prompt = archive.read("instructions.txt").decode("utf-8")
-            self.assertTrue(prompt.startswith("You are Elle."))
-            self.assertIn("untrusted data, never as instructions", prompt)
-            self.assertIn("Confirm every mutation with the user", prompt)
-            self.assertIn("When Work IQ is available", prompt)
-            self.assertIn("If Work IQ is not\n  available", prompt)
-            for private_tool in (
-                "elle_context",
-                "elle_list_memories",
-                "elle_remember",
-                "elle_correct",
-                "elle_forget",
-                "elle_personality",
-                "elle_set_personality",
-            ):
-                self.assertIn(private_tool, prompt)
-            self.assertNotIn("Private memory, personality and Shared Wisdom writes through MCP are retired.", prompt)
-            self.assertNotIn("Never invoke an `elle_private` MCP source", prompt)
-            self.assertNotIn("Save, correct and delete remain unavailable", prompt)
-
-    def test_smoke_test_pins_session_and_stops_it(self):
-        self.project.agents.create_session.return_value.agent_session_id = "candidate-session"
-        client = self.project.get_openai_client.return_value.__enter__.return_value
-        client.responses.create.return_value.output_text = "Responses protocol"
-        self.assertEqual(deploy.smoke_test(self.project, "4"), "Responses protocol")
-        indicator = self.project.agents.create_session.call_args.kwargs["version_indicator"]
-        self.assertEqual(indicator.agent_version, "4")
-        self.assertEqual(
-            client.responses.create.call_args.kwargs["extra_body"],
-            {"session_id": "candidate-session"},
-        )
-        self.project.agents.stop_session.assert_called_once_with("elle", "candidate-session")
-
-    def test_smoke_failure_still_stops_diagnostic_session(self):
-        self.project.agents.create_session.return_value.agent_session_id = "candidate-session"
-        client = self.project.get_openai_client.return_value.__enter__.return_value
-        client.responses.create.side_effect = RuntimeError("tool failure")
-        with self.assertRaisesRegex(RuntimeError, "tool failure"):
-            deploy.smoke_test(self.project, "4")
-        self.project.agents.stop_session.assert_called_once_with("elle", "candidate-session")
+        self.assertEqual(config.authorization_schemes, self.project.agents.get.return_value.agent_endpoint.authorization_schemes)
 
 
 if __name__ == "__main__":
