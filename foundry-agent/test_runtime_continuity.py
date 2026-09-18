@@ -547,7 +547,7 @@ class ContinuityRuntimeTests(unittest.TestCase):
             any(isinstance(handler, continuity._NoRedirectHandler) for handler in handlers)
         )
 
-    def test_runtime_registers_direct_private_tools_and_recall(self):
+    def test_runtime_registers_direct_demo_tools_and_recall(self):
         environment = {
             "ELLE_CONTINUITY_ENDPOINT": ENDPOINT,
             "ELLE_CONTINUITY_SCOPE": SCOPE,
@@ -570,6 +570,8 @@ class ContinuityRuntimeTests(unittest.TestCase):
                 "elle_forget",
                 "elle_personality",
                 "elle_set_personality",
+                "elle_shared_wisdom",
+                "elle_contribute_wisdom",
                 "elle_recall_continuity",
             ],
         )
