@@ -11,3 +11,4 @@ __pycache__/
 *.py[cod]
 /evals/results/
 /.agent-work/
+/web-demo/Elle-Teams-Demo.zip

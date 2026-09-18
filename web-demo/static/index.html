@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Elle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #18211d;
+      --muted: #61706a;
+      --paper: #f7f5ef;
+      --surface: #fffef9;
+      --line: #d9ddd7;
+      --green: #14614c;
+      --green-dark: #0c4838;
+      --coral: #d85b43;
+      --blue: #316b8a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(120deg, rgba(216, 91, 67, .08), transparent 34%),
+        repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(24, 33, 29, .025) 32px),
+        var(--paper);
+      font-family: "DM Sans", sans-serif;
+    }
+
+    .shell {
+      width: min(920px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 24px clamp(16px, 4vw, 42px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font: 600 38px/1 "Fraunces", serif;
+      letter-spacing: 0;
+    }
+
+    .live {
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    #identity {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 13px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #messages {
+      min-height: 0;
+      padding: 28px 0 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .welcome {
+      margin: auto 0;
+      padding: 40px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .welcome h2 {
+      max-width: 620px;
+      margin: 0 0 10px;
+      font: 600 clamp(28px, 5vw, 48px)/1.08 "Fraunces", serif;
+      letter-spacing: 0;
+    }
+
+    .welcome p { margin: 0; color: var(--muted); }
+
+    .message {
+      max-width: 78%;
+      animation: arrive .28s ease-out both;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      padding: 12px 15px;
+      border-radius: 8px 8px 2px 8px;
+      color: white;
+      background: var(--green);
+    }
+
+    .message.elle {
+      align-self: flex-start;
+      padding-left: 16px;
+      border-left: 3px solid var(--coral);
+      white-space: pre-wrap;
+    }
+
+    .message.error { border-left-color: var(--coral); color: #9b2d22; }
+
+    .timing {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 14px 45px rgba(24, 33, 29, .09);
+    }
+
+    textarea {
+      min-height: 48px;
+      max-height: 150px;
+      padding: 12px;
+      resize: none;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font: 16px/1.45 "DM Sans", sans-serif;
+    }
+
+    button {
+      align-self: end;
+      min-width: 84px;
+      height: 46px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 6px;
+      color: white;
+      background: var(--green);
+      font: 600 14px "DM Sans", sans-serif;
+      cursor: pointer;
+    }
+
+    button:hover { background: var(--green-dark); }
+    button:disabled { cursor: wait; opacity: .55; }
+
+    @keyframes arrive {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 560px) {
+      .shell { padding-top: 16px; }
+      #identity { max-width: 42vw; }
+      .message { max-width: 90%; }
+      .welcome { padding: 26px 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="brand"><h1>Elle</h1><span class="live">Foundry live</span></div>
+      <span id="identity">Connecting...</span>
+    </header>
+
+    <section id="messages" aria-live="polite">
+      <div class="welcome" id="welcome">
+        <h2>A direct line, with none of the extra ceremony.</h2>
+        <p>Ask anything. Each response includes the measured end-to-end latency.</p>
+      </div>
+    </section>
+
+    <form id="chat-form">
+      <textarea id="prompt" maxlength="8000" placeholder="Message Elle" aria-label="Message Elle" required></textarea>
+      <button id="send" type="submit">Send</button>
+    </form>
+  </main>
+
+  <script src="https://res.cdn.office.net/teams-js/2.37.0/js/MicrosoftTeams.min.js"></script>
+  <script>
+    const form = document.querySelector("#chat-form");
+    const prompt = document.querySelector("#prompt");
+    const send = document.querySelector("#send");
+    const messages = document.querySelector("#messages");
+    const welcome = document.querySelector("#welcome");
+
+    const authHeaders = (async () => {
+      try {
+        await Promise.race([
+          microsoftTeams.app.initialize(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Not in Teams")), 1200))
+        ]);
+        const token = await microsoftTeams.authentication.getAuthToken();
+        return { Authorization: `Bearer ${token}` };
+      } catch {
+        return {};
+      }
+    })();
+
+    authHeaders.then((headers) => fetch("/api/me", { headers }))
+      .then((response) => {
+        if (response.status === 401) {
+          window.location.assign("/.auth/login/aad?post_login_redirect_uri=/");
+          throw new Error("Sign-in required");
+        }
+        if (!response.ok) throw new Error("Identity check failed");
+        return response.json();
+      })
+      .then((user) => { document.querySelector("#identity").textContent = user.name; })
+      .catch((error) => {
+        if (error.message !== "Sign-in required") {
+          document.querySelector("#identity").textContent = "Sign-in unavailable";
+        }
+      });
+
+    function addMessage(kind, text, timing) {
+      welcome?.remove();
+      const element = document.createElement("div");
+      element.className = `message ${kind}`;
+      const content = document.createElement("div");
+      content.textContent = text;
+      element.append(content);
+      if (timing) {
+        const metrics = document.createElement("div");
+        metrics.className = "timing";
+        metrics.textContent = timing;
+        element.append(metrics);
+      }
+      messages.append(element);
+      element.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = prompt.value.trim();
+      if (!message || send.disabled) return;
+      addMessage("user", message);
+      prompt.value = "";
+      send.disabled = true;
+      send.textContent = "Waiting";
+      const started = performance.now();
+      try {
+        const headers = await authHeaders;
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...headers },
+          body: JSON.stringify({ message })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Request failed");
+        const browserMs = Math.round(performance.now() - started);
+        const session = result.sessionReused ? "warm session" : "new session";
+        addMessage("elle", result.message, `Browser ${browserMs} ms · Foundry ${result.foundryMs} ms · Server ${result.serverMs} ms · ${session}`);
+      } catch (error) {
+        addMessage("elle error", error.message);
+      } finally {
+        send.disabled = false;
+        send.textContent = "Send";
+        prompt.focus();
+      }
+    });
+
+    prompt.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
+  </script>
+</body>
+</html>

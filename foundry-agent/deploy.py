@@ -216,20 +216,28 @@ def main() -> None:
         action="store_true",
         help="Stage an unpromoted one-model-call benchmark candidate",
     )
+    parser.add_argument(
+        "--full-memory",
+        action="store_true",
+        help="Stage an unpromoted candidate with private memory actions",
+    )
     args = parser.parse_args()
     if args.promote_version and not args.expected_live_version:
         parser.error("--promote-version requires --expected-live-version")
     if (args.promote_version or args.test_version) and (
-        args.identity_binding_probe_nonce or args.bare_metal
+        args.identity_binding_probe_nonce or args.bare_metal or args.full_memory
     ):
         parser.error("Testing/promotion cannot be combined with staging options")
+    if args.bare_metal and args.full_memory:
+        parser.error("Choose either --bare-metal or --full-memory")
     if not (
         args.promote_version
         or args.test_version
         or args.identity_binding_probe_nonce is not None
         or args.bare_metal
+        or args.full_memory
     ):
-        parser.error("Staging requires --identity-binding-probe-nonce or an explicit action")
+        parser.error("Staging requires an explicit action")
 
     PROJECT_ENDPOINT = args.project_endpoint.rstrip("/")
     credential = AzureCliCredential(process_timeout=120)

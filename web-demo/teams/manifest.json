@@ -1,0 +1,46 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.19",
+  "version": "1.0.0",
+  "id": "e0960393-4de3-415a-997c-7a06bfdfcd1d",
+  "developer": {
+    "name": "Elle Demo",
+    "websiteUrl": "https://elle-web-demo.redglacier-a69f4093.swedencentral.azurecontainerapps.io",
+    "privacyUrl": "https://elle-web-demo.redglacier-a69f4093.swedencentral.azurecontainerapps.io/",
+    "termsOfUseUrl": "https://elle-web-demo.redglacier-a69f4093.swedencentral.azurecontainerapps.io/"
+  },
+  "name": {
+    "short": "Elle",
+    "full": "Elle direct Foundry demo"
+  },
+  "description": {
+    "short": "A direct, measured conversation with Elle.",
+    "full": "A lightweight personal tab for testing direct Microsoft Foundry response latency with Elle."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#14614C",
+  "staticTabs": [
+    {
+      "entityId": "elle-chat",
+      "name": "Elle",
+      "contentUrl": "https://elle-web-demo.redglacier-a69f4093.swedencentral.azurecontainerapps.io/",
+      "websiteUrl": "https://elle-web-demo.redglacier-a69f4093.swedencentral.azurecontainerapps.io/",
+      "scopes": [
+        "personal"
+      ]
+    }
+  ],
+  "permissions": [
+    "identity"
+  ],
+  "validDomains": [
+    "elle-web-demo.redglacier-a69f4093.swedencentral.azurecontainerapps.io"
+  ],
+  "webApplicationInfo": {
+    "id": "e0960393-4de3-415a-997c-7a06bfdfcd1d",
+    "resource": "api://elle-web-demo.redglacier-a69f4093.swedencentral.azurecontainerapps.io/e0960393-4de3-415a-997c-7a06bfdfcd1d"
+  }
+}

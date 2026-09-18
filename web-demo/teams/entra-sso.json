@@ -1,0 +1,19 @@
+{
+  "identifierUris": [
+    "api://elle-web-demo.redglacier-a69f4093.swedencentral.azurecontainerapps.io/e0960393-4de3-415a-997c-7a06bfdfcd1d"
+  ],
+  "api": {
+    "oauth2PermissionScopes": [
+      {
+        "adminConsentDescription": "Allow Teams to access the Elle demo as the signed-in user.",
+        "adminConsentDisplayName": "Access the Elle demo",
+        "id": "e3736ebe-602f-4535-806e-b0277b2b989f",
+        "isEnabled": true,
+        "type": "User",
+        "userConsentDescription": "Allow Teams to access the Elle demo on your behalf.",
+        "userConsentDisplayName": "Access the Elle demo",
+        "value": "access_as_user"
+      }
+    ]
+  }
+}

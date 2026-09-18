@@ -134,6 +134,27 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(result["agentVersion"], "14")
         self.assertNotIn("tool_catalog", result)
 
+    def test_cli_stages_full_memory_without_diagnostic_nonce(self):
+        project = MagicMock()
+        client = MagicMock()
+        client.return_value.__enter__.return_value = project
+        output = io.StringIO()
+        with patch.object(sys, "argv", ["deploy.py", "--full-memory"]), patch.object(
+            deploy, "AzureCliCredential"
+        ), patch.object(deploy, "AIProjectClient", client), patch.object(
+            deploy, "deploy", return_value="20"
+        ) as stage, contextlib.redirect_stdout(output):
+            deploy.main()
+
+        stage.assert_called_once_with(
+            project,
+            None,
+            bare_metal_mode=False,
+        )
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["agentVersion"], "20")
+        self.assertFalse(result["bareMetalMode"])
+
     def test_promotion_keeps_existing_protocol_and_auth(self):
         deploy.promote(self.project, "14", "12")
         config = self.project.agents.update_details.call_args.kwargs["agent_endpoint"]
