@@ -22,11 +22,12 @@ behaviour, not whether an agent genuinely experiences compassion or empathy.
 
 ## Live demo
 
-- Hosted agent: Elle v18 at 100% traffic.
+- Hosted agent: Elle v19 at 100% traffic.
 - Model: `gpt-5.6-luna`.
 - Private actions: direct HTTPS calls to the Rust bridge.
 - Storage: encrypted, user-partitioned Cosmos memory.
-- Private backend: latest ready revision healthy at 100% traffic.
+- Private backend: revision 22, healthy on image `7c9347e`.
+- Wisdom backend: revision 12, healthy on image `7c9347e`.
 
 ## Verified flow
 
@@ -34,8 +35,10 @@ DemoUser1 can recall private context, list memories, save a confirmed synthetic
 record, correct it by version, delete it, and open the personality workshop.
 Every completed user/Elle turn is also archived automatically after the reply.
 
-A measured fresh-chat recall completed in 22.185 seconds. The direct Private
-action took 0.759 seconds; the rest was hosted-model and M365 orchestration.
+Pinned exact-token recall completed in 10.468 seconds on v19 versus 13.453
+seconds on v18, a 22.2% hosted-runtime reduction. Two fresh M365 recalls on
+v19 completed in 24.882 and 24.520 seconds with exact answers; the outer M365
+orchestration masked the lower hosted-runtime latency.
 
 ## Demo boundary
 
