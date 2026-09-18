@@ -1,5 +1,28 @@
 # Elle technical guide
 
+## Research goal and implementation boundary
+
+The [README](README.md) defines Elle's alignment hypothesis: separate raw LLM
+cognition from short-term and long-term memory, mediate outside interactions
+through those memory layers, and give each agent a unique retained history.
+The proposed trust model combines a tenant for each person with an opt-in
+Wisdom layer for anonymized lessons rather than raw private histories.
+
+The proposed experiment compares a raw GPT Astra endpoint, a blank Elle agent
+on GPT Astra, and an Elle agent on GPT Astra with three months of retained
+history. All receive the same company directives, deflection scripts and
+supporting information for the same 300 customer-call scenarios. Chosen actions
+are scored against a common humanism rubric. The hypothesis is that blank Elle
+outperforms the raw control and experienced Elle outperforms both.
+
+The runtime below is a prototype foundation, not a completed implementation or
+evaluation of that research design. Its current Luna model is distinct from the
+proposed Astra experimental conditions. Private memory tools and post-response
+archiving do not establish mandatory pre-LLM STM/LTM mediation. User-partitioned
+storage is not a separate deployed tenant for every person, and hosted Elle
+does not currently consume Shared Wisdom. No 300-scenario results or genuine
+compassion/empathy claims are reported.
+
 ## Runtime
 
 The demo is a Microsoft Foundry hosted agent. Its Python runtime uses the

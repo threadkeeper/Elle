@@ -141,9 +141,19 @@ exit 2
             [string]$Method,
             [switch]$SkipHttpErrorCheck,
             [int]$MaximumRedirection,
-            [int]$TimeoutSec
+            [int]$TimeoutSec,
+            [string]$ContentType,
+            [string]$Body
         )
-        $status = if ($Uri.EndsWith('/healthz')) { 200 } else { 401 }
+        $status = if ($Uri.EndsWith('/healthz')) {
+            200
+        }
+        elseif ($ContentType -eq 'application/json' -and $Body -eq '{}') {
+            401
+        }
+        else {
+            415
+        }
         return [pscustomobject]@{ StatusCode = $status }
     }
 

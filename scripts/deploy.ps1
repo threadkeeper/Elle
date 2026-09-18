@@ -125,12 +125,22 @@ function Test-Endpoint {
     param(
         [string]$Uri,
         [string]$Method,
-        [int]$ExpectedStatus
+        [int]$ExpectedStatus,
+        [string]$ContentType,
+        [string]$Body
     )
     for ($attempt = 1; $attempt -le 10; $attempt++) {
         try {
-            $response = Invoke-WebRequest -Uri $Uri -Method $Method `
-                -SkipHttpErrorCheck -MaximumRedirection 0 -TimeoutSec 15
+            $requestArguments = @{
+                Uri = $Uri
+                Method = $Method
+                SkipHttpErrorCheck = $true
+                MaximumRedirection = 0
+                TimeoutSec = 15
+            }
+            if ($ContentType) { $requestArguments.ContentType = $ContentType }
+            if ($Body) { $requestArguments.Body = $Body }
+            $response = Invoke-WebRequest @requestArguments
             if ([int]$response.StatusCode -eq $ExpectedStatus) { return $true }
         }
         catch {
@@ -155,7 +165,8 @@ foreach ($app in $selectedApps) {
         throw 'Container app health verification failed.'
     }
     if ($app.Role -eq 'Private' -and
-        -not (Test-Endpoint -Uri "$url/bridge/elle_context" -Method 'POST' -ExpectedStatus 401)) {
+        -not (Test-Endpoint -Uri "$url/bridge/elle_context" -Method 'POST' -ExpectedStatus 401 `
+            -ContentType 'application/json' -Body '{}')) {
         throw 'Private bridge authentication verification failed.'
     }
     if ($app.Role -eq 'Private') {

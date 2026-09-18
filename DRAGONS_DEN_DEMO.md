@@ -4,6 +4,27 @@ This local rehearsal uses reviewed public-source evidence about Burnt Peanut
 streams. It does not commit captions, transcripts, media, generated reports, or
 private records. It does not deploy anything or call hosted Elle.
 
+## Relationship to the alignment experiment
+
+This is supplementary memory-storage evidence, not the primary competition
+pitch or the experiment described in the [README](README.md).
+
+Elle's proposed alignment benchmark compares a raw GPT Astra control, blank
+Elle on GPT Astra, and Elle on GPT Astra with three months of retained history
+across the same 300 customer-call scenarios. All receive identical company
+directives, deflection scripts and supporting information; chosen actions are
+scored against the same humanism rubric. Blank Elle is hypothesized to show
+more positive, human-like behaviour than control, and experienced Elle more
+than both. No benchmark results are reported.
+
+The bounded fixture below does not constitute three months of agent life
+experience, does not run an LLM comparison, and does not measure compassion or
+empathy. Its local private-memory and reviewed-Wisdom operations support the
+research foundation without proving mandatory STM/LTM mediation or hosted
+Wisdom consumption. Do not present this rehearsal as the planned experiment.
+
+## Rehearsal scope
+
 The fixture covers every date from 2026-08-01 through 2026-09-17: 48 ordered
 calendar dates, 39 caption-grounded YouTube actual-start dates, two Twitch
 archive-created dates, and seven unsupported dates. A Twitch `createdAt`
@@ -135,6 +156,9 @@ Hosted Elle currently does not consume Shared Wisdom. This rehearsal proves the
 local storage and role boundaries, not hosted retrieval behavior.
 
 ## Candidate five-minute stage script
+
+This is a supplementary storage-rehearsal script, not the README-aligned
+competition submission video.
 
 This script is locally authored and is pending the separately authorized
 hosted-Elle rewrite gate. No hosted rewrite has occurred.
