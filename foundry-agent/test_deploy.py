@@ -60,6 +60,8 @@ class DeploymentTests(unittest.TestCase):
             {
                 "AZURE_AI_MODEL_DEPLOYMENT_NAME": "gpt-5.6-luna",
                 "ELLE_PRIVATE_TOOLS_ENDPOINT": deploy.PRIVATE_TOOLS_ENDPOINT,
+                "ELLE_WISDOM_TOOLS_ENDPOINT": deploy.WISDOM_TOOLS_ENDPOINT,
+                "ELLE_WISDOM_SCOPE": deploy.WISDOM_SCOPE,
             },
         )
         self.assertNotIn("TOOLBOX_ENDPOINT", definition.environment_variables)
@@ -71,6 +73,7 @@ class DeploymentTests(unittest.TestCase):
             self.assertIn("turn_memory.py", archive.namelist())
             self.assertIn("bare_metal.py", archive.namelist())
             self.assertIn("runtime_mode.py", archive.namelist())
+            self.assertIn("wisdom_tools.py", archive.namelist())
             instructions = archive.read("instructions.txt").decode("utf-8")
 
         self.assertIn("30% positive, 40% neutral and 30% negative", instructions)
@@ -78,6 +81,7 @@ class DeploymentTests(unittest.TestCase):
             "Every completed user/Elle turn is archived to private memory automatically",
             instructions,
         )
+        self.assertIn("Use `elle_shared_wisdom`", instructions)
 
     def test_staging_honors_model_override(self):
         self.project.agents.create_version_from_code.return_value.version = "14"

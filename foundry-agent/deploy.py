@@ -36,6 +36,11 @@ PRIVATE_TOOLS_ENDPOINT = (
     "https://elle-private-vnet.yellowsky-9d92d540.swedencentral."
     "azurecontainerapps.io/bridge"
 )
+WISDOM_TOOLS_ENDPOINT = (
+    "https://elle-wisdom-vnet.yellowsky-9d92d540.swedencentral."
+    "azurecontainerapps.io/bridge"
+)
+WISDOM_SCOPE = "api://0479a728-6b4d-4d96-8693-ef766bc8e1fe/.default"
 CONTINUITY_ENDPOINT = (
     "https://elle-private-vnet.yellowsky-9d92d540.swedencentral."
     "azurecontainerapps.io/continuity/context"
@@ -70,6 +75,7 @@ def package_source() -> tuple[bytes, str]:
         archive.write(SOURCE / "private_tools.py", "private_tools.py")
         archive.write(SOURCE / "runtime_mode.py", "runtime_mode.py")
         archive.write(SOURCE / "turn_memory.py", "turn_memory.py")
+        archive.write(SOURCE / "wisdom_tools.py", "wisdom_tools.py")
         archive.write(SOURCE / "requirements.txt", "requirements.txt")
         archive.writestr("instructions.txt", prompt_text())
     payload = buffer.getvalue()
@@ -109,6 +115,8 @@ def deploy(
     environment_variables = {
         "AZURE_AI_MODEL_DEPLOYMENT_NAME": model_deployment_name(),
         "ELLE_PRIVATE_TOOLS_ENDPOINT": PRIVATE_TOOLS_ENDPOINT,
+        "ELLE_WISDOM_TOOLS_ENDPOINT": WISDOM_TOOLS_ENDPOINT,
+        "ELLE_WISDOM_SCOPE": WISDOM_SCOPE,
     }
     if bare_metal_mode:
         environment_variables.update({

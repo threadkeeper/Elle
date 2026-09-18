@@ -117,11 +117,26 @@ fn run() -> Result<()> {
             }
             mcp::ServerRole::SharedWisdom => EntraVerifier::for_tenant_users(&tenant, &audience)?,
         };
-        let bridge_verifier = match (role, bridge_actor.as_deref()) {
-            (mcp::ServerRole::Private, Some(actor)) => {
-                Some(EntraVerifier::new(&tenant, &audience, actor)?)
+        let bridge_client = env::var("ELLE_BRIDGE_CLIENT_ID").ok();
+        let bridge_verifier = match (role, bridge_actor.as_deref(), bridge_client.as_deref()) {
+            (mcp::ServerRole::Private, Some(actor), None) => {
+                Some(elle::server::BridgeVerifier::Delegated(EntraVerifier::new(
+                    &tenant, &audience, actor,
+                )?))
             }
-            _ => None,
+            (mcp::ServerRole::SharedWisdom, Some(actor), Some(client)) => {
+                Some(elle::server::BridgeVerifier::Workload {
+                    verifier: WorkloadEntraVerifier::new(&tenant, &audience, actor, client)?,
+                    owner: OwnerId::new(&tenant, actor)?,
+                })
+            }
+            (mcp::ServerRole::SharedWisdom, None, None) => None,
+            (_, None, None) => None,
+            _ => {
+                return Err(Error::Configuration(
+                    "Bridge actor and client configuration do not match the server role",
+                ))
+            }
         };
         let bridge_policy = match (role, bridge_actor) {
             (mcp::ServerRole::Private, Some(actor)) => Some(elle::server::BridgePolicy::new(

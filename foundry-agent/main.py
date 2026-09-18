@@ -23,6 +23,7 @@ from caller_identity import (
 from continuity import load_continuity_config, make_continuity_tool
 from private_tools import make_private_tools
 from turn_memory import AutomaticTurnMemory
+from wisdom_tools import make_wisdom_tools
 
 
 def load_instructions() -> str:
@@ -63,6 +64,11 @@ def build_agent(
     local_tools = [
         elle_identity_status,
         *make_private_tools(endpoint=os.environ.get("ELLE_PRIVATE_TOOLS_ENDPOINT")),
+        *make_wisdom_tools(
+            credential=credential,
+            endpoint=os.environ.get("ELLE_WISDOM_TOOLS_ENDPOINT"),
+            scope=os.environ.get("ELLE_WISDOM_SCOPE"),
+        ),
     ]
     if continuity_config is not None:
         local_tools.append(
