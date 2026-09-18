@@ -1,6 +1,7 @@
 //! User-controlled memory operations composed from encrypted storage primitives.
 
-use std::collections::BTreeSet;
+use std::cell::RefCell;
+use std::collections::{BTreeMap, BTreeSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
@@ -19,6 +20,7 @@ use crate::wisdom::{screen_text, WisdomCatalog, WisdomEntry, WisdomProvenance};
 
 const PROFILE_ID: &str = "personality";
 const SHARED_WISDOM_OWNER: &str = "shared-wisdom";
+const MAX_CACHED_PERSONALITIES: usize = 256;
 
 /// Versioned personality settings returned to the owner.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,6 +61,7 @@ pub struct MemoryService {
     repository: Box<dyn MemoryRepository>,
     cipher: FieldCipher,
     embedder: Option<Box<dyn Embedder>>,
+    personality_cache: RefCell<BTreeMap<String, PersonalityState>>,
 }
 
 impl MemoryService {
@@ -72,7 +75,16 @@ impl MemoryService {
             repository,
             cipher,
             embedder,
+            personality_cache: RefCell::new(BTreeMap::new()),
         }
+    }
+
+    fn cache_personality(&self, owner: &OwnerId, state: PersonalityState) {
+        let mut cache = self.personality_cache.borrow_mut();
+        if cache.len() >= MAX_CACHED_PERSONALITIES && !cache.contains_key(owner.as_str()) {
+            cache.clear();
+        }
+        cache.insert(owner.as_str().to_owned(), state);
     }
 
     /// Save an explicitly requested memory; an identical retry returns its record.
@@ -230,7 +242,10 @@ impl MemoryService {
 
     /// Read constrained personality settings, using the explicit default if absent.
     pub fn personality(&self, owner: &OwnerId) -> Result<PersonalityState> {
-        match self.repository.get(owner.as_str(), PROFILE_ID)? {
+        if let Some(cached) = self.personality_cache.borrow().get(owner.as_str()).cloned() {
+            return Ok(cached);
+        }
+        let state = match self.repository.get(owner.as_str(), PROFILE_ID)? {
             None => Ok(PersonalityState {
                 settings: Personality::default(),
                 version: 0,
@@ -252,7 +267,9 @@ impl MemoryService {
                     version: record.version,
                 })
             }
-        }
+        }?;
+        self.cache_personality(owner, state.clone());
+        Ok(state)
     }
 
     /// Save settings using version zero to create, or the reviewed current version.
@@ -286,10 +303,12 @@ impl MemoryService {
         } else if !self.repository.create(&record)? {
             return Err(Error::Conflict);
         }
-        Ok(PersonalityState {
+        let state = PersonalityState {
             settings,
             version: record.version,
-        })
+        };
+        self.cache_personality(owner, state.clone());
+        Ok(state)
     }
 
     /// Start or restart the low-friction personality workshop.

@@ -116,12 +116,31 @@ def remember_conversation_turn(
     )
 
 
+def private_context(
+    *,
+    endpoint: str | None,
+    query: str,
+    limit: int = 5,
+    user_id: str | None = None,
+    dynamic_only: bool = False,
+) -> Any:
+    arguments: dict[str, Any] = {"query": query, "limit": limit}
+    if dynamic_only:
+        arguments["dynamic_only"] = True
+    return _request_tool(
+        endpoint or _DEFAULT_ENDPOINT,
+        "elle_context",
+        arguments,
+        user_id=user_id,
+    )
+
+
 def make_private_tools(*, endpoint: str | None = None) -> list[Callable[..., Any]]:
     endpoint = endpoint or _DEFAULT_ENDPOINT
 
     def elle_context(query: str, limit: int = 5) -> Any:
         """Recall relevant private Elle memories and personality guidance."""
-        return _request_tool(endpoint, "elle_context", {"query": query, "limit": limit})
+        return private_context(endpoint=endpoint, query=query, limit=limit)
 
     def elle_list_memories() -> Any:
         """List the user's live private Elle memories, IDs, versions, and sources."""

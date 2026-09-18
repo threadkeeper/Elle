@@ -2,20 +2,50 @@
 
 use std::fs;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use elle::archive::ArchiveCodec;
 use elle::encryption::FieldCipher;
-use elle::error::Error;
+use elle::error::{Error, Result};
 use elle::file_repository::FileRepository;
 use elle::identity::OwnerId;
 use elle::mcp;
 use elle::memory::{Category, MemoryPayload, RememberRequest};
 use elle::personality::{Detail, Personality, Tone};
+use elle::repository::{MemoryRepository, StoredRecord};
 use elle::service::MemoryService;
 use serde_json::{json, Value};
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
+
+struct CountingRepository {
+    inner: FileRepository,
+    reads: Arc<AtomicUsize>,
+}
+
+impl MemoryRepository for CountingRepository {
+    fn list(&self, owner_id: &str) -> Result<Vec<StoredRecord>> {
+        self.inner.list(owner_id)
+    }
+
+    fn get(&self, owner_id: &str, id: &str) -> Result<Option<StoredRecord>> {
+        self.reads.fetch_add(1, Ordering::SeqCst);
+        self.inner.get(owner_id, id)
+    }
+
+    fn create(&mut self, record: &StoredRecord) -> Result<bool> {
+        self.inner.create(record)
+    }
+
+    fn replace(&mut self, record: &StoredRecord, expected_version: u64) -> Result<()> {
+        self.inner.replace(record, expected_version)
+    }
+
+    fn delete(&mut self, owner_id: &str, id: &str, expected_version: u64) -> Result<()> {
+        self.inner.delete(owner_id, id, expected_version)
+    }
+}
 
 struct Directory(PathBuf);
 impl Directory {
@@ -62,6 +92,32 @@ fn request(content: &str, key: &str) -> RememberRequest {
         idempotency_key: key.into(),
         expires_at: None,
     }
+}
+
+#[test]
+fn personality_is_cached_until_successful_change() {
+    let directory = Directory::new();
+    let reads = Arc::new(AtomicUsize::new(0));
+    let repository = CountingRepository {
+        inner: FileRepository::open(&directory.0).unwrap(),
+        reads: Arc::clone(&reads),
+    };
+    let mut service = MemoryService::new(Box::new(repository), FieldCipher::new([7; 32]), None);
+    let user = owner('b');
+
+    assert_eq!(service.personality(&user).unwrap().version, 0);
+    assert_eq!(service.personality(&user).unwrap().version, 0);
+    assert_eq!(reads.load(Ordering::SeqCst), 1);
+
+    let chosen = Personality {
+        tone: Tone::Direct,
+        detail: Detail::Concise,
+        profile: None,
+    };
+    let changed = service.set_personality(&user, chosen.clone(), 0).unwrap();
+    assert_eq!(changed.version, 1);
+    assert_eq!(service.personality(&user).unwrap().settings, chosen);
+    assert_eq!(reads.load(Ordering::SeqCst), 2);
 }
 
 #[test]
@@ -218,6 +274,18 @@ fn mcp_preserves_identity_boundary_and_notifications_cannot_mutate() {
     let malformed = mcp::handle(initialize.to_string().as_bytes(), &user, &mut service).unwrap();
     assert_eq!(malformed["error"]["code"], -32602);
 
+    let dynamic_context = json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+        "name":"elle_context","arguments":{"query":"concise","limit":5,"dynamic_only":true}
+    }});
+    let result = mcp::handle(dynamic_context.to_string().as_bytes(), &user, &mut service).unwrap();
+    let context: Value =
+        serde_json::from_str(result["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    assert_eq!(
+        context["recall"]["memories"][0]["payload"]["content"],
+        "Prefer concise responses"
+    );
+    assert!(context.get("personality").is_none());
+    assert!(context.get("styleGuidance").is_none());
     let initialize = json!({"jsonrpc":"2.0","id":2,"method":"initialize","params":{
         "protocolVersion":mcp::PROTOCOL_VERSION,
         "capabilities":{},
@@ -323,4 +391,17 @@ fn private_and_shared_servers_expose_disjoint_tools() {
     .unwrap();
     assert_eq!(result["result"]["isError"], true);
     assert!(service.list(&user).unwrap().is_empty());
+
+    let call = json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{
+        "name":"elle_shared_wisdom",
+        "arguments":{"query":"next step","limit":5,"dynamic_only":true}
+    }});
+    let result = mcp::handle_for_role(
+        call.to_string().as_bytes(),
+        &user,
+        &mut service,
+        mcp::ServerRole::SharedWisdom,
+    )
+    .unwrap();
+    assert_eq!(result["result"]["isError"], true);
 }

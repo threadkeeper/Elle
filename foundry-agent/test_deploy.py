@@ -69,6 +69,8 @@ class DeploymentTests(unittest.TestCase):
         payload, _digest = deploy.package_source()
         with zipfile.ZipFile(io.BytesIO(payload)) as archive:
             self.assertIn("turn_memory.py", archive.namelist())
+            self.assertIn("bare_metal.py", archive.namelist())
+            self.assertIn("runtime_mode.py", archive.namelist())
             instructions = archive.read("instructions.txt").decode("utf-8")
 
         self.assertIn("30% positive, 40% neutral and 30% negative", instructions)
@@ -94,6 +96,23 @@ class DeploymentTests(unittest.TestCase):
             "model-router",
         )
 
+    def test_bare_metal_staging_disables_optional_runtime_work(self):
+        self.project.agents.create_version_from_code.return_value.version = "19"
+        with patch.object(deploy, "wait_until_active"), patch.object(
+            deploy, "package_source", return_value=(b"zip", "digest")
+        ):
+            self.assertEqual(
+                deploy.deploy(self.project, bare_metal_mode=True),
+                "19",
+            )
+
+        definition = self.project.agents.create_version_from_code.call_args.kwargs[
+            "definition"
+        ]
+        self.assertEqual(definition.environment_variables["ELLE_BARE_METAL_MODE"], "true")
+        self.assertEqual(definition.environment_variables["ENABLE_INSTRUMENTATION"], "false")
+        self.assertEqual(definition.environment_variables["OTEL_SDK_DISABLED"], "true")
+
     def test_cli_stages_without_catalog_options(self):
         project = MagicMock()
         client = MagicMock()
@@ -106,7 +125,11 @@ class DeploymentTests(unittest.TestCase):
         ) as stage, contextlib.redirect_stdout(output):
             deploy.main()
 
-        stage.assert_called_once_with(project, "demo")
+        stage.assert_called_once_with(
+            project,
+            "demo",
+            bare_metal_mode=False,
+        )
         result = json.loads(output.getvalue())
         self.assertEqual(result["agentVersion"], "14")
         self.assertNotIn("tool_catalog", result)

@@ -65,8 +65,10 @@ def package_source() -> tuple[bytes, str]:
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.write(SOURCE / "main.py", "main.py")
         archive.write(SOURCE / "caller_identity.py", "caller_identity.py")
+        archive.write(SOURCE / "bare_metal.py", "bare_metal.py")
         archive.write(SOURCE / "continuity.py", "continuity.py")
         archive.write(SOURCE / "private_tools.py", "private_tools.py")
+        archive.write(SOURCE / "runtime_mode.py", "runtime_mode.py")
         archive.write(SOURCE / "turn_memory.py", "turn_memory.py")
         archive.write(SOURCE / "requirements.txt", "requirements.txt")
         archive.writestr("instructions.txt", prompt_text())
@@ -95,6 +97,7 @@ def wait_until_active(
 def deploy(
     project: AIProjectClient,
     identity_binding_probe_nonce: str | None = None,
+    bare_metal_mode: bool = False,
 ) -> str:
     endpoint = project.agents.get(AGENT_NAME).agent_endpoint
     if endpoint is None or endpoint.version_selector is None:
@@ -107,6 +110,14 @@ def deploy(
         "AZURE_AI_MODEL_DEPLOYMENT_NAME": model_deployment_name(),
         "ELLE_PRIVATE_TOOLS_ENDPOINT": PRIVATE_TOOLS_ENDPOINT,
     }
+    if bare_metal_mode:
+        environment_variables.update({
+            "ELLE_BARE_METAL_MODE": "true",
+            "AGENT_FRAMEWORK_USER_AGENT_DISABLED": "true",
+            "AGENT_FRAMEWORK_FEATURE_MASK_DISABLED": "true",
+            "ENABLE_INSTRUMENTATION": "false",
+            "OTEL_SDK_DISABLED": "true",
+        })
     if identity_binding_probe_nonce is not None:
         if not _PROBE_NONCE_PATTERN.fullmatch(identity_binding_probe_nonce):
             raise ValueError("Identity binding probe nonce must be safe bounded ASCII")
@@ -200,12 +211,24 @@ def main() -> None:
         "--identity-binding-probe-nonce",
         help="Stage a separate temporary identity binding probe candidate",
     )
+    parser.add_argument(
+        "--bare-metal",
+        action="store_true",
+        help="Stage an unpromoted one-model-call benchmark candidate",
+    )
     args = parser.parse_args()
     if args.promote_version and not args.expected_live_version:
         parser.error("--promote-version requires --expected-live-version")
-    if (args.promote_version or args.test_version) and args.identity_binding_probe_nonce:
+    if (args.promote_version or args.test_version) and (
+        args.identity_binding_probe_nonce or args.bare_metal
+    ):
         parser.error("Testing/promotion cannot be combined with staging options")
-    if not (args.promote_version or args.test_version or args.identity_binding_probe_nonce is not None):
+    if not (
+        args.promote_version
+        or args.test_version
+        or args.identity_binding_probe_nonce is not None
+        or args.bare_metal
+    ):
         parser.error("Staging requires --identity-binding-probe-nonce or an explicit action")
 
     PROJECT_ENDPOINT = args.project_endpoint.rstrip("/")
@@ -218,7 +241,11 @@ def main() -> None:
         if args.test_version:
             print(smoke_test(project, args.test_version))
             return
-        agent_version = deploy(project, args.identity_binding_probe_nonce)
+        agent_version = deploy(
+            project,
+            args.identity_binding_probe_nonce,
+            bare_metal_mode=args.bare_metal,
+        )
 
     print(
         json.dumps(
@@ -226,6 +253,7 @@ def main() -> None:
                 "agent": AGENT_NAME,
                 "agentVersion": agent_version,
                 "model": model_deployment_name(),
+                "bareMetalMode": args.bare_metal,
                 "projectEndpoint": PROJECT_ENDPOINT,
                 "promoted": False,
             },

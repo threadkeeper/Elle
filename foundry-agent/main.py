@@ -2,11 +2,20 @@ import asyncio
 import os
 from pathlib import Path
 
-from agent_framework import Agent
-from agent_framework.foundry import FoundryChatClient
+from runtime_mode import bare_metal_enabled, disable_optional_runtime_work
+
+
+BARE_METAL_MODE = bare_metal_enabled()
+if BARE_METAL_MODE:
+    disable_optional_runtime_work()
+
+from agent_framework import Agent, RawAgent
+from agent_framework.foundry import FoundryChatClient, RawFoundryChatClient
+from agent_framework.observability import disable_instrumentation
 from agent_framework_foundry_hosting import ResponsesHostServer
 from azure.identity import DefaultAzureCredential
 
+from bare_metal import BARE_METAL_INSTRUCTIONS, BareMetalContextProvider
 from caller_identity import (
     elle_identity_status,
     validate_identity_binding_probe_nonce,
@@ -24,7 +33,26 @@ def load_instructions() -> str:
     return instructions
 
 
-def build_agent(*, client, credential, name: str, instructions: str):
+def build_agent(
+    *,
+    client,
+    credential,
+    name: str,
+    instructions: str,
+    bare_metal_mode: bool = BARE_METAL_MODE,
+):
+    if bare_metal_mode:
+        return RawAgent(
+            name=name,
+            client=client,
+            instructions=BARE_METAL_INSTRUCTIONS,
+            context_providers=[
+                BareMetalContextProvider(
+                    endpoint=os.environ.get("ELLE_PRIVATE_TOOLS_ENDPOINT")
+                )
+            ],
+            default_options={"store": False, "tools": []},
+        )
     validate_identity_binding_probe_nonce(
         os.environ.get("ELLE_IDENTITY_BINDING_PROBE_NONCE")
     )
@@ -56,6 +84,8 @@ def build_agent(*, client, credential, name: str, instructions: str):
 
 async def main() -> None:
     model = os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-5.6-luna")
+    if BARE_METAL_MODE:
+        disable_instrumentation()
     credential = DefaultAzureCredential(
         exclude_cli_credential=True,
         exclude_developer_cli_credential=True,
@@ -65,7 +95,8 @@ async def main() -> None:
         exclude_visual_studio_code_credential=True,
     )
 
-    client = FoundryChatClient(
+    client_type = RawFoundryChatClient if BARE_METAL_MODE else FoundryChatClient
+    client = client_type(
         project_endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
         model=model,
         credential=credential,
@@ -75,9 +106,15 @@ async def main() -> None:
         client=client,
         instructions=load_instructions(),
         credential=credential,
+        bare_metal_mode=BARE_METAL_MODE,
     )
 
-    server = ResponsesHostServer(agent)
+    host_options = (
+        {"configure_observability": None, "access_log": None}
+        if BARE_METAL_MODE
+        else {}
+    )
+    server = ResponsesHostServer(agent, **host_options)
     await server.run_async()
 
 

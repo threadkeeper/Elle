@@ -26,6 +26,38 @@ class Response:
 
 
 class PrivateToolsTests(unittest.TestCase):
+    def test_private_context_accepts_explicit_user_binding(self):
+        with patch("private_tools.urllib.request.urlopen", return_value=Response()) as open_url:
+            result = private_tools.private_context(
+                endpoint="https://example.test/bridge",
+                query="fast recall",
+                limit=3,
+                user_id="explicit-user",
+            )
+
+        request = open_url.call_args.args[0]
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(
+            request.get_header("X-elle-continuity-handle-sha256"),
+            hashlib.sha256(b"explicit-user").hexdigest(),
+        )
+        self.assertEqual(json.loads(request.data), {"query": "fast recall", "limit": 3})
+
+    def test_private_context_can_request_dynamic_data_only(self):
+        with patch("private_tools.urllib.request.urlopen", return_value=Response()) as open_url:
+            private_tools.private_context(
+                endpoint="https://example.test/bridge",
+                query="fast recall",
+                user_id="explicit-user",
+                dynamic_only=True,
+            )
+
+        request = open_url.call_args.args[0]
+        self.assertEqual(
+            json.loads(request.data),
+            {"query": "fast recall", "limit": 5, "dynamic_only": True},
+        )
+
     def test_context_forwards_current_user_binding(self):
         request = None
         with patch("private_tools.urllib.request.urlopen", return_value=Response()) as open_url:
