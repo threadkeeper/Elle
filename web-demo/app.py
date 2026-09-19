@@ -13,7 +13,7 @@ PROJECT_ENDPOINT = os.environ.get(
     "https://foundry-jva-002.services.ai.azure.com/api/projects/proj-default-sweden",
 )
 AGENT_NAME = os.environ.get("AZURE_AI_AGENT_NAME", "elle")
-AGENT_VERSION = os.environ.get("AZURE_AI_AGENT_VERSION", "20")
+AGENT_VERSION = os.environ.get("AZURE_AI_AGENT_VERSION", "22")
 MAX_MESSAGE_LENGTH = 8_000
 
 app = Flask(__name__, static_folder="static", static_url_path="")

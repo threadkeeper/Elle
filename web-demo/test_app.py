@@ -34,7 +34,7 @@ class WebDemoTests(unittest.TestCase):
         version = web.project.agents.create_session.call_args.kwargs[
             "version_indicator"
         ]
-        self.assertEqual(version.agent_version, "20")
+        self.assertEqual(version.agent_version, "22")
 
     def test_chat_rejects_empty_message(self):
         response = self.client.post("/api/chat", json={"message": "  "})

@@ -22,13 +22,13 @@ behaviour, not whether an agent genuinely experiences compassion or empathy.
 
 ## Live demo
 
-- Hosted agent: Elle v20 at 100% traffic.
+- Hosted agent: Elle v22 at 100% traffic.
 - Model: `gpt-5.6-luna`.
 - Private actions: direct HTTPS calls to the Rust bridge.
 - Storage: encrypted, user-partitioned Cosmos memory.
 - Private backend: revision 22, healthy on image `7c9347e`.
-- Wisdom backend: revision 12, healthy on image `7c9347e`.
-- Web demo: revision 5, healthy and pinned to Elle v20.
+- Wisdom backend: revision 21, healthy on image `d74b019`.
+- Web demo: revision 6, healthy and pinned to Elle v22.
 
 ## Verified flow
 
@@ -41,11 +41,16 @@ seconds on v18, a 22.2% hosted-runtime reduction. Two fresh M365 recalls on
 v19 completed in 24.882 and 24.520 seconds with exact answers; the outer M365
 orchestration masked the lower hosted-runtime latency.
 
-Elle v20 restores the full private-memory actions and automatic turn archive.
+Elle v20 restored the full private-memory actions and automatic turn archive.
 An explicit synthetic marker was saved and recalled exactly from a fresh
 Foundry session. The direct candidate measured 10.942 seconds to save, 8.576
 seconds for cold recall, 7.046 seconds for warm recall and 3.377 seconds for a
 warm no-memory reply.
+
+Elle v22 adds direct Shared Wisdom search and confirmed contribution actions.
+The Wisdom bridge requires the exact Elle service identity, its API client ID,
+and the `Continuity.Access` application role. A fresh v22 session retrieved the
+reviewed "small reversible steps" entry while the bridge logged HTTP 200.
 
 The authenticated web path measured 21.555 seconds browser end to end for a
 new-session save, including 10.350 seconds in Foundry; warm private recall took
