@@ -119,7 +119,8 @@ struct WorkloadClaims {
     nbf: u64,
     iss: String,
     aud: String,
-    azp: String,
+    azp: Option<String>,
+    appid: Option<String>,
     roles: Vec<String>,
     ver: String,
 }
@@ -434,7 +435,12 @@ impl WorkloadEntraVerifier {
         if claims.iss != self.verifier.authority {
             return Err(AuthRejection::IssuerMismatch);
         }
-        if !valid_uuid(&claims.azp) || !claims.azp.eq_ignore_ascii_case(self.client_id.as_str()) {
+        let client_id = claims
+            .azp
+            .as_deref()
+            .or(claims.appid.as_deref())
+            .ok_or(AuthRejection::ClientMismatch)?;
+        if !valid_uuid(client_id) || !client_id.eq_ignore_ascii_case(self.client_id.as_str()) {
             return Err(AuthRejection::ClientMismatch);
         }
         if claims.roles.as_slice() != ["Continuity.Access"] {
@@ -820,6 +826,18 @@ mod tests {
         assert!(verifier
             .validate_claims_value(valid_workload_claims(&verifier), 1000)
             .is_ok());
+
+        let mut appid_only = valid_workload_claims(&verifier);
+        appid_only.as_object_mut().unwrap().remove("azp");
+        assert!(verifier.validate_claims_value(appid_only, 1000).is_ok());
+
+        let mut missing_client = valid_workload_claims(&verifier);
+        missing_client.as_object_mut().unwrap().remove("azp");
+        missing_client.as_object_mut().unwrap().remove("appid");
+        assert_eq!(
+            verifier.validate_claims_value(missing_client, 1000),
+            Err(AuthRejection::ClientMismatch)
+        );
     }
 
     #[test]
@@ -858,9 +876,7 @@ mod tests {
             );
         }
 
-        for field in [
-            "tid", "oid", "aud", "iss", "azp", "roles", "ver", "exp", "nbf",
-        ] {
+        for field in ["tid", "oid", "aud", "iss", "roles", "ver", "exp", "nbf"] {
             let mut invalid = valid.clone();
             invalid.as_object_mut().unwrap().remove(field);
             assert_eq!(
