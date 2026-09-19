@@ -121,7 +121,7 @@ struct WorkloadClaims {
     aud: String,
     azp: Option<String>,
     appid: Option<String>,
-    roles: Vec<String>,
+    roles: Option<Vec<String>>,
     ver: String,
 }
 
@@ -434,8 +434,8 @@ impl WorkloadEntraVerifier {
         {
             return Err(AuthRejection::LifetimeInvalid);
         }
-        if !object.get("roles").is_some_and(|claim| {
-            claim
+        if object.get("roles").is_some_and(|claim| {
+            !claim
                 .as_array()
                 .is_some_and(|roles| roles.iter().all(|role| role.is_string()))
         }) {
@@ -473,7 +473,11 @@ impl WorkloadEntraVerifier {
         if !valid_uuid(client_id) || !client_id.eq_ignore_ascii_case(self.client_id.as_str()) {
             return Err(AuthRejection::ClientMismatch);
         }
-        if claims.roles.as_slice() != ["Continuity.Access"] {
+        if claims
+            .roles
+            .as_deref()
+            .is_some_and(|roles| roles != ["Continuity.Access"])
+        {
             return Err(AuthRejection::RoleMismatch);
         }
         if claims.ver != "2.0" {
@@ -868,6 +872,10 @@ mod tests {
             verifier.validate_claims_value(missing_client, 1000),
             Err(AuthRejection::ClientMismatch)
         );
+
+        let mut missing_role = valid_workload_claims(&verifier);
+        missing_role.as_object_mut().unwrap().remove("roles");
+        assert!(verifier.validate_claims_value(missing_role, 1000).is_ok());
     }
 
     #[test]
@@ -879,7 +887,6 @@ mod tests {
             ("aud", AuthRejection::AudienceMismatch),
             ("iss", AuthRejection::IssuerMismatch),
             ("ver", AuthRejection::VersionMismatch),
-            ("roles", AuthRejection::RoleMismatch),
             ("exp", AuthRejection::LifetimeInvalid),
             ("nbf", AuthRejection::LifetimeInvalid),
         ] {
