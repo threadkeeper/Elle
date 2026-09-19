@@ -417,6 +417,36 @@ impl WorkloadEntraVerifier {
                 }
             }
         }
+        for (name, rejection) in [
+            ("tid", AuthRejection::TenantMismatch),
+            ("oid", AuthRejection::ActorMismatch),
+            ("aud", AuthRejection::AudienceMismatch),
+            ("iss", AuthRejection::IssuerMismatch),
+            ("ver", AuthRejection::VersionMismatch),
+        ] {
+            if !object.get(name).is_some_and(|claim| claim.is_string()) {
+                return Err(rejection);
+            }
+        }
+        if !["exp", "nbf"]
+            .iter()
+            .all(|name| object.get(*name).is_some_and(|claim| claim.is_u64()))
+        {
+            return Err(AuthRejection::LifetimeInvalid);
+        }
+        if !object.get("roles").is_some_and(|claim| {
+            claim
+                .as_array()
+                .is_some_and(|roles| roles.iter().all(|role| role.is_string()))
+        }) {
+            return Err(AuthRejection::RoleMismatch);
+        }
+        if !["azp", "appid"]
+            .iter()
+            .any(|name| object.get(*name).is_some_and(|claim| claim.is_string()))
+        {
+            return Err(AuthRejection::ClientMismatch);
+        }
         let claims: WorkloadClaims =
             serde_json::from_value(value).map_err(|_| AuthRejection::ClaimsShapeInvalid)?;
         self.validate_claims(&claims, now)
@@ -841,6 +871,25 @@ mod tests {
     }
 
     #[test]
+    fn workload_missing_claims_have_value_free_diagnostics() {
+        let verifier = workload_verifier();
+        for (field, expected) in [
+            ("tid", AuthRejection::TenantMismatch),
+            ("oid", AuthRejection::ActorMismatch),
+            ("aud", AuthRejection::AudienceMismatch),
+            ("iss", AuthRejection::IssuerMismatch),
+            ("ver", AuthRejection::VersionMismatch),
+            ("roles", AuthRejection::RoleMismatch),
+            ("exp", AuthRejection::LifetimeInvalid),
+            ("nbf", AuthRejection::LifetimeInvalid),
+        ] {
+            let mut claims = valid_workload_claims(&verifier);
+            claims.as_object_mut().unwrap().remove(field);
+            assert_eq!(verifier.validate_claims_value(claims, 1000), Err(expected));
+        }
+    }
+
+    #[test]
     fn workload_claim_policy_rejects_wrong_identity_role_version_and_lifetime() {
         let verifier = workload_verifier();
         let valid = valid_workload_claims(&verifier);
@@ -872,16 +921,6 @@ mod tests {
             assert_eq!(
                 verifier.validate_claims_value(invalid, 1000),
                 Err(expected),
-                "{field}"
-            );
-        }
-
-        for field in ["tid", "oid", "aud", "iss", "roles", "ver", "exp", "nbf"] {
-            let mut invalid = valid.clone();
-            invalid.as_object_mut().unwrap().remove(field);
-            assert_eq!(
-                verifier.validate_claims_value(invalid, 1000),
-                Err(AuthRejection::ClaimsShapeInvalid),
                 "{field}"
             );
         }
